@@ -1,6 +1,6 @@
 services:
-  llmtests:
-    image: llmtests
+  hatchling_debug:
+    image: hatchling_debug
     build:
       context: .
       dockerfile: ./Dockerfile
