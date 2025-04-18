@@ -474,10 +474,14 @@ async def interactive_chat(settings: ChatSettings, debug_log: SessionDebugLog = 
                         # Remove the system message if it exists
                         chat.messages = [msg for msg in chat.messages if msg.get("role") != "system"]
                     continue
+                elif not user_message.strip():
+                    # Skip empty input
+                    continue
                 else:
                     # Send the query
                     print("\nAssistant: ", end="", flush=True)
                     await chat.send_message(user_message, session)
+                    print()  # Add an extra newline for readability
                 
             except KeyboardInterrupt:
                 print("\nInterrupted. Ending chat session...")

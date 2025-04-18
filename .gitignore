@@ -20,7 +20,6 @@ build/
 *.mo
 *.sqlite3
 *.db
-*.env
 *.venv
 .env/
 .venv/

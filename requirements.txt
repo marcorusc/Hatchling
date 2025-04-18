@@ -1,5 +1,5 @@
 # To ensure app dependencies are ported from your virtual environment/host machine into your container, run 'pip freeze > requirements.txt' in the terminal to overwrite this file
-ollama>=0.6.5
+ollama>=0.4.8
 requests>=2.31.0
 aiohttp>=3.9.1
 asyncio>=3.4.3
