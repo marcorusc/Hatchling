@@ -1,0 +1,6 @@
+services:
+  llmtests:
+    image: llmtests
+    build:
+      context: .
+      dockerfile: ./Dockerfile

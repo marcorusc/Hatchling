@@ -1,0 +1,146 @@
+import json
+from typing import List, Tuple
+import aiohttp
+import os
+from ollama_mcp_adapter import OllamaMCPAdapter
+from session_debug_log import SessionDebugLog
+from chat_settings import ChatSettings
+
+class ModelManager:
+    """Manages model availability and downloading."""
+    
+    def __init__(self, settings: ChatSettings, debug_log: SessionDebugLog = None):
+        self.settings = settings
+        self.debug_log = debug_log
+    
+    async def check_availability(self, session: aiohttp.ClientSession, model_name: str) -> bool:
+        """Check if a model is available in Ollama."""
+        try:
+            async with session.get(f"{self.settings.ollama_api_url}/tags") as response:
+                if response.status == 200:
+                    data = await response.json()
+                    available_models = [model["name"] for model in data.get("models", [])]
+                    print(f"Available models: {available_models}")
+                    return model_name in available_models
+                else:
+                    text = await response.text()
+                    raise Exception(f"Failed to list models: {response.status}, {text}")
+        except Exception as e:
+            raise Exception(f"Error checking available models: {e}")
+    
+    async def pull_model(self, session: aiohttp.ClientSession, model_name: str) -> None:
+        """Pull a model from Ollama."""
+        self.debug_log.info(f"Model {model_name} is not available. Pulling the model.")
+        
+        try:
+            async with session.post(
+                f"{self.settings.ollama_api_url}/pull",
+                json={"name": model_name},
+                timeout=None  # No timeout for model downloading
+            ) as response:
+                if response.status != 200:
+                    text = await response.text()
+                    error_msg = f"Failed to pull model: {response.status}, {text}"
+                    self.debug_log.error(error_msg)
+                    raise Exception(error_msg)
+                
+                self.debug_log.info(f"Started downloading {model_name}. This may take a while...")
+                async for line in response.content.iter_any():
+                    if line:
+                        try:
+                            line_text = line.decode('utf-8').strip()
+                            if not line_text:
+                                continue
+                            
+                            # Split by newlines to handle multiple JSON objects in one line
+                            json_objects = line_text.split('\n')
+                            for json_obj in json_objects:
+                                if not json_obj.strip():
+                                    continue
+                                    
+                                try:
+                                    data = json.loads(json_obj)
+                                    if "status" in data:
+                                        print(f"Status: {data['status']}")
+                                    if "completed" in data and "total" in data:
+                                        percentage = (data["completed"] / data["total"]) * 100
+                                        print(f"Progress: {percentage:.2f}%")
+                                except json.JSONDecodeError:
+                                    self.debug_log.error(f"Received invalid JSON during model pull: {json_obj}")
+                                except Exception as e:
+                                    self.debug_log.error(f"Error processing model pull response: {e}\nData: {json_obj}")
+                        except Exception as e:
+                            self.debug_log.error(f"Error processing line: {e}")
+                
+                self.debug_log.info(f"Download of {model_name} completed.")
+        except Exception as e:
+            error_msg = f"Error pulling model: {e}"
+            self.debug_log.error(error_msg)
+            raise Exception(error_msg)
+            
+    async def check_ollama_service(self) -> Tuple[bool, str]:
+        """Asynchronously check if Ollama service is available."""
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(f"{self.settings.ollama_api_url}/version", timeout=5) as response:
+                    if response.status == 200:
+                        data = await response.json()
+                        return True, f"Ollama service is running, version: {data.get('version')}"
+                    else:
+                        return False, f"Ollama service returned status code: {response.status}"
+        except Exception as e:
+            return False, f"Ollama service is not available: {e}"
+            
+    async def check_mcp_server(self, server_paths: List[str]) -> bool:
+        """Check if MCP servers are available.
+        
+        Args:
+            server_paths: List of paths to MCP server scripts
+            
+        Returns:
+            bool: True if at least one MCP server is available, False otherwise
+        """
+        try:
+            # Validate server paths
+            valid_paths = []
+            for path in server_paths:
+                # Convert to absolute path if relative
+                if not os.path.isabs(path):
+                    path = os.path.abspath(path)
+                    
+                # Check if file exists
+                if not os.path.isfile(path):
+                    self.debug_log.warning(f"MCP server script not found: {path}")
+                    continue
+                    
+                valid_paths.append(path)
+            
+            if not valid_paths:
+                self.debug_log.error("No valid MCP server scripts found")
+                return False
+            
+            adapter = OllamaMCPAdapter(valid_paths)
+            connected = await adapter.connect_to_servers()
+            
+            if connected:
+                tools = adapter.get_all_tools()
+                # Extract tool names safely
+                tool_names = []
+                for tool in tools:
+                    if isinstance(tool, dict) and "function" in tool and "name" in tool["function"]:
+                        tool_names.append(tool["function"]["name"])
+                
+                message = f"Connected to MCP server(s). Found {len(tools)} tools: " + \
+                         ", ".join(tool_names)
+                self.debug_log.info(message)
+                
+                # Clean disconnect
+                await adapter.disconnect_all()
+                return True
+            else:
+                self.debug_log.error("Could not connect to any MCP server.")
+                return False
+                
+        except Exception as e:
+            self.debug_log.error(f"Error checking MCP servers: {e}")
+            return False

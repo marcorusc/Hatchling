@@ -1,0 +1,50 @@
+# Project
+__temp__/
+
+# VSCode
+.vscode/
+*.code-workspace
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+*.log
+*.pot
+*.mo
+*.sqlite3
+*.db
+*.env
+*.venv
+.env/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+*.manifest
+*.spec
+*.coverage
+.coverage.*
+.cache/
+*.pytest_cache/
+.tox/
+nosetests.xml
+coverage.xml
+*.mypy_cache/
+.dmypy.json
+.pyre/
+.pytype/
+*.ipynb_checkpoints
+*.pyc
+
+# Docker
+*.dockerfile
+Dockerfile.*
+docker-compose.override.yml
+.dockerignore
+.docker/
