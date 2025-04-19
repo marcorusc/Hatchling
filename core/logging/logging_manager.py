@@ -10,12 +10,14 @@ class LoggingManager:
     _instance = None
     
     def __new__(cls):
+        """Ensure singleton pattern implementation."""
         if cls._instance is None:
             cls._instance = super(LoggingManager, cls).__new__(cls)
             cls._instance._initialized = False
         return cls._instance
     
     def __init__(self):
+        """Initialize the logging manager if not already initialized."""
         if self._initialized:
             return
             
@@ -54,7 +56,7 @@ class LoggingManager:
         """Set the log level for CLI output.
         
         Args:
-            level: The log level (e.g., logging.DEBUG, logging.INFO)
+            level (int): The log level (e.g., logging.DEBUG, logging.INFO).
         """
         self.cli_log_level = level
         
@@ -65,15 +67,15 @@ class LoggingManager:
                 handler.setLevel(level)
     
     def get_session(self, name: str, 
-                   formatter: Optional[logging.Formatter] = None) -> Optional[SessionDebugLog]:
+                   formatter: Optional[logging.Formatter] = None) -> SessionDebugLog:
         """Get a session debug log by name, creating it if it doesn't exist.
         
         Args:
-            name: The name of the session debug log
-            formatter: Optional custom formatter for this session
+            name (str): The name of the session debug log.
+            formatter (logging.Formatter, optional): Custom formatter for this session.
             
         Returns:
-            The session debug log, or None if it doesn't exist and create_if_missing is False
+            SessionDebugLog: The session debug log.
         """
         if name not in self.sessions:
             # Create a new session if it doesn't exist
@@ -88,17 +90,21 @@ class LoggingManager:
         return self.sessions[name]
     
     def get_all_sessions(self) -> List[str]:
-        """Get a list of all session names."""
+        """Get a list of all session names.
+        
+        Returns:
+            List[str]: List of session names.
+        """
         return list(self.sessions.keys())
     
     def clear_session(self, name: str) -> bool:
         """Clear a specific session log.
         
         Args:
-            name: The name of the session to clear
+            name (str): The name of the session to clear.
             
         Returns:
-            True if the session was cleared, False if it doesn't exist
+            bool: True if the session was cleared, False if it doesn't exist.
         """
         if name in self.sessions:
             self.sessions[name].clear_logs()
@@ -114,10 +120,10 @@ class LoggingManager:
         """Create a console handler with the current CLI log level.
         
         Args:
-            formatter: Optional formatter to use, falls back to default formatter
+            formatter (Optional[logging.Formatter], optional): Formatter to use, falls back to default formatter.
             
         Returns:
-            A configured console handler
+            logging.StreamHandler: A configured console handler.
         """
         console = logging.StreamHandler()
         console.setLevel(self.cli_log_level)

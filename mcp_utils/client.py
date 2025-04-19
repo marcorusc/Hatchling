@@ -10,10 +10,10 @@ from core.logging.logging_manager import logging_manager
 
 
 class MCPClient:
-    """Client for MCP servers that manages connections and tool execution"""
+    """Client for MCP servers that manages connections and tool execution."""
     
     def __init__(self):
-        """Initialize the MCP client"""
+        """Initialize the MCP client."""
         self.client_id = str(uuid.uuid4())
         self.session: Optional[ClientSession] = None
         self.exit_stack = AsyncExitStack()
@@ -34,13 +34,13 @@ class MCPClient:
                                   formatter=logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
     
     async def connect(self, server_path: str) -> bool:
-        """Connect to an MCP server via stdio
+        """Connect to an MCP server via stdio.
         
         Args:
-            server_path: Path to the server script (.py file)
+            server_path (str): Path to the server script (.py file).
             
         Returns:
-            bool: True if connection was successful, False otherwise
+            bool: True if connection was successful, False otherwise.
         """
         try:
             self.server_path = server_path
@@ -100,12 +100,12 @@ class MCPClient:
             return False
     
     def _start_heartbeat(self):
-        """Start a background task to periodically check connection health"""
+        """Start a background task to periodically check connection health."""
         if self._heartbeat_task is None:
             self._heartbeat_task = asyncio.create_task(self._heartbeat_loop())
     
     async def _heartbeat_loop(self):
-        """Periodically check if the connection is still alive"""
+        """Periodically check if the connection is still alive."""
         try:
             while self.connected:
                 await asyncio.sleep(30)  # Check every 30 seconds
@@ -148,7 +148,7 @@ class MCPClient:
             self._heartbeat_task = None
     
     async def _cleanup_connection(self):
-        """Clean up the connection resources"""
+        """Clean up the connection resources."""
         if self.session:
             # Session will be cleaned by exit_stack later
             self.session = None
@@ -157,7 +157,7 @@ class MCPClient:
         self.write = None
             
     async def disconnect(self):
-        """Disconnect from the MCP server and clean up resources"""
+        """Disconnect from the MCP server and clean up resources."""
         if self.connected:
             try:
                 self.debug_log.info(f"Disconnecting from MCP server: {self.server_path}")
@@ -194,19 +194,20 @@ class MCPClient:
                 self._reconnection_attempts = 0
     
     async def execute_tool(self, tool_name: str, arguments: Dict[str, Any]) -> Any:
-        """Execute an MCP tool by name with given arguments
+        """Execute an MCP tool by name with given arguments.
         
         Args:
-            tool_name: Name of the tool to execute
-            arguments: Arguments to pass to the tool
+            tool_name (str): Name of the tool to execute.
+            arguments (Dict[str, Any]): Arguments to pass to the tool.
             
         Returns:
-            Any: Result of the tool execution
+            Any: Result of the tool execution.
             
         Raises:
-            ConnectionError: If not connected to MCP server
-            ValueError: If the tool is not found
-            Exception: For any other errors during execution
+            ConnectionError: If not connected to MCP server.
+            ValueError: If the tool is not found.
+            TimeoutError: If the tool execution times out.
+            Exception: For any other errors during execution.
         """
         if not self.connected or not self.session:
             raise ConnectionError("Not connected to MCP server")

@@ -8,6 +8,12 @@ class SessionDebugLog:
     """Class for managing session-specific logging with in-memory storage for viewing logs during a chat session."""
     
     def __init__(self, name: Optional[str] = "SessionDebugLog", formatter: Optional[logging.Formatter] = None):
+        """Initialize a session-specific logger.
+        
+        Args:
+            name (str, optional): Name of the logger. Defaults to "SessionDebugLog".
+            formatter (logging.Formatter, optional): Custom formatter for log messages. 
+        """
         # Create a unique logger for this session
         self.logger = logging.getLogger(name)
         self.logger.setLevel(logging.INFO)
@@ -31,27 +37,47 @@ class SessionDebugLog:
         self.log_entries = []
     
     def debug(self, message: str):
-        """Log a debug message"""
+        """Log a debug message.
+        
+        Args:
+            message (str): The message to log.
+        """
         self.logger.debug(message)
         self.log_entries.append((datetime.now().strftime("%Y-%m-%d %H:%M:%S:%f"), "DEBUG", message))
     
     def info(self, message: str):
-        """Log an info message"""
+        """Log an info message.
+        
+        Args:
+            message (str): The message to log.
+        """
         self.logger.info(message)
         self.log_entries.append((datetime.now().strftime("%Y-%m-%d %H:%M:%S:%f"), "INFO", message))
     
     def warning(self, message: str):
-        """Log a warning message"""
+        """Log a warning message.
+        
+        Args:
+            message (str): The message to log.
+        """
         self.logger.warning(message)
         self.log_entries.append((datetime.now().strftime("%Y-%m-%d %H:%M:%S:%f"), "WARNING", message))
     
     def error(self, message: str):
-        """Log an error message"""
+        """Log an error message.
+        
+        Args:
+            message (str): The message to log.
+        """
         self.logger.error(message)
         self.log_entries.append((datetime.now().strftime("%Y-%m-%d %H:%M:%S:%f"), "ERROR", message))
     
     def critical(self, message: str):
-        """Log a critical message"""
+        """Log a critical message.
+        
+        Args:
+            message (str): The message to log.
+        """
         self.logger.critical(message)
         self.log_entries.append((datetime.now().strftime("%Y-%m-%d %H:%M:%S:%f"), "CRITICAL", message))
     
@@ -59,10 +85,10 @@ class SessionDebugLog:
         """Get formatted log entries, optionally limited to the last N entries.
         
         Args:
-            last_n: If provided, only return the last N log entries
+            last_n (int, optional): If provided, only return the last N log entries.
             
         Returns:
-            A formatted string with the log entries
+            str: A formatted string with the log entries.
         """
         if not self.log_entries:
             return "No logs recorded in this session."

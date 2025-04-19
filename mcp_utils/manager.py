@@ -8,17 +8,19 @@ from mcp_utils.client import MCPClient
 from core.logging.logging_manager import logging_manager
 
 class MCPManager:
-    """Centralized manager for everything MCP-related: servers, clients, and adapters"""
+    """Centralized manager for everything MCP-related: servers, clients, and adapters."""
     
     _instance = None
     
     def __new__(cls):
+        """Ensure singleton pattern implementation."""
         if cls._instance is None:
             cls._instance = super(MCPManager, cls).__new__(cls)
             cls._instance._initialized = False
         return cls._instance
     
     def __init__(self):
+        """Initialize the MCP manager if not already initialized."""
         if self._initialized:
             return
             
@@ -43,7 +45,14 @@ class MCPManager:
                                   formatter=logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
     
     def validate_server_paths(self, server_paths: List[str]) -> List[str]:
-        """Validate server paths and return the list of valid absolute paths."""
+        """Validate server paths and return the list of valid absolute paths.
+        
+        Args:
+            server_paths (List[str]): List of server paths to validate.
+            
+        Returns:
+            List[str]: List of valid absolute paths.
+        """
         valid_paths = []
         for path in server_paths:
             # Convert to absolute path if relative
@@ -59,7 +68,14 @@ class MCPManager:
         return valid_paths
     
     async def start_server(self, server_path: str) -> Optional[subprocess.Popen]:
-        """Start an MCP server in a subprocess."""
+        """Start an MCP server in a subprocess.
+        
+        Args:
+            server_path (str): Path to the MCP server script.
+            
+        Returns:
+            Optional[subprocess.Popen]: Process object if server started successfully, None otherwise.
+        """
         if not os.path.isfile(server_path):
             self.debug_log.error(f"MCP server script not found: {server_path}")
             return None
@@ -94,11 +110,11 @@ class MCPManager:
         """Initialize the MCP system with the given server paths.
         
         Args:
-            server_paths: List of paths to MCP server scripts
-            auto_start: Whether to start servers if they aren't running
+            server_paths (List[str]): List of paths to MCP server scripts.
+            auto_start (bool, optional): Whether to start servers if they aren't running. Defaults to False.
             
         Returns:
-            bool: True if initialization was successful
+            bool: True if initialization was successful.
         """
         self.server_paths = server_paths
         connected = await self.connect_to_servers(auto_start)
@@ -112,7 +128,14 @@ class MCPManager:
         return connected
     
     async def connect_to_servers(self, auto_start: bool = False) -> bool:
-        """Connect to all configured MCP servers."""
+        """Connect to all configured MCP servers.
+        
+        Args:
+            auto_start (bool, optional): Whether to start servers if they aren't running. Defaults to False.
+            
+        Returns:
+            bool: True if connected to at least one server successfully.
+        """
         if self.connected and self.mcp_clients:
             return True
             
@@ -176,20 +199,40 @@ class MCPManager:
             self.debug_log.info("Disconnected from all MCP servers")
     
     def get_tools_by_name(self) -> Dict[str, Any]:
-        """Get a dictionary of tool name to tool object mappings."""
+        """Get a dictionary of tool name to tool object mappings.
+        
+        Returns:
+            Dict[str, Any]: Dictionary mapping tool names to tool objects.
+        """
         tools = {}
         for client in self.mcp_clients.values():
             tools.update(client.tools)
         return tools
     
     def get_ollama_tools(self) -> List[Dict[str, Any]]:
-        """Get all available tools in Ollama format."""
+        """Get all available tools in Ollama format.
+        
+        Returns:
+            List[Dict[str, Any]]: List of tools in Ollama format.
+        """
         if not self.connected or not self._adapter:
             return []
         return self._adapter.get_all_tools()
     
     async def execute_tool(self, tool_name: str, arguments: Dict[str, Any]) -> Any:
-        """Execute a tool by name with the given arguments."""
+        """Execute a tool by name with the given arguments.
+        
+        Args:
+            tool_name (str): Name of the tool to execute.
+            arguments (Dict[str, Any]): Arguments to pass to the tool.
+            
+        Returns:
+            Any: Result of the tool execution.
+            
+        Raises:
+            ConnectionError: If not connected to any MCP server.
+            ValueError: If the tool is not found in any connected MCP server.
+        """
         if not self.connected or not self.mcp_clients:
             raise ConnectionError("Not connected to any MCP server")
             
@@ -217,7 +260,17 @@ class MCPManager:
             raise
     
     async def process_tool_calls(self, tool_calls: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Process tool calls in Ollama format."""
+        """Process tool calls in Ollama format.
+        
+        Args:
+            tool_calls (List[Dict[str, Any]]): List of tool calls in Ollama format.
+            
+        Returns:
+            List[Dict[str, Any]]: List of tool responses in Ollama format.
+            
+        Raises:
+            ConnectionError: If MCP system is not properly initialized.
+        """
         if not self.connected or not self._adapter:
             raise ConnectionError("MCP system not properly initialized")
         return await self._adapter.process_tool_calls(tool_calls, self)

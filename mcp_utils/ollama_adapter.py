@@ -17,7 +17,11 @@ class OllamaMCPAdapter:
                                                     formatter=logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
     
     async def build_schema_cache(self, mcp_tools: Dict[str, Any]) -> None:
-        """Build cache of Ollama tool schemas based on the schemas of MCP tools."""
+        """Build cache of Ollama tool schemas based on the schemas of MCP tools.
+        
+        Args:
+            mcp_tools (Dict[str, Any]): Dictionary of MCP tools to convert.
+        """
         try:
             # Clear existing caches
             self._mcp_to_ollama_schemas = {}
@@ -43,7 +47,14 @@ class OllamaMCPAdapter:
             # Don't re-raise, as this is a non-critical error that shouldn't halt execution
     
     def _extract_MCPTool_schema_in_Ollama(self, tool) -> Dict[str, Any]:
-        """Extract schema from an MCP tool object."""
+        """Extract schema from an MCP tool object.
+        
+        Args:
+            tool: The MCP tool object to extract schema from.
+            
+        Returns:
+            Dict[str, Any]: Schema in Ollama format.
+        """
         if hasattr(tool, "name") and hasattr(tool, "description") and hasattr(tool, "inputSchema"):
             # Build a schema dictionary from the tool's attributes
             schema = {
@@ -57,7 +68,11 @@ class OllamaMCPAdapter:
             return {}
     
     def get_all_tools(self) -> List[Dict[str, Any]]:
-        """Get all available tools in Ollama's expected format."""
+        """Get all available tools in Ollama's expected format.
+        
+        Returns:
+            List[Dict[str, Any]]: List of tools in Ollama format.
+        """
         if not self._mcp_to_ollama_schemas:
             self.debug_log.warning("No tools available in schema cache")
             return []
@@ -69,11 +84,11 @@ class OllamaMCPAdapter:
         """Process Ollama tool calls and execute them using MCP.
         
         Args:
-            tool_calls: List of tool calls from Ollama
-            manager: Reference to the MCPManager that will execute the tools
+            tool_calls (List[Dict[str, Any]]): List of tool calls from Ollama.
+            manager: Reference to the MCPManager that will execute the tools.
             
         Returns:
-            List of tool responses in Ollama format
+            List[Dict[str, Any]]: List of tool responses in Ollama format.
         """
         tool_responses = []
         processing_tasks = []
@@ -88,7 +103,15 @@ class OllamaMCPAdapter:
         return tool_responses
     
     async def _process_single_tool_call(self, tool_call: Dict[str, Any], manager) -> Dict[str, Any]:
-        """Process a single tool call and return the response in Ollama's expected format."""
+        """Process a single tool call and return the response in Ollama's expected format.
+        
+        Args:
+            tool_call (Dict[str, Any]): The tool call to process.
+            manager: Reference to the MCPManager that will execute the tool.
+            
+        Returns:
+            Dict[str, Any]: Tool response in Ollama format.
+        """
         function_call = tool_call.get("function", {})
         function_name = function_call.get("name", "")
         

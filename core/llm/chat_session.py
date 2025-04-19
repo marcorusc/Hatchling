@@ -14,6 +14,7 @@ from core.llm.model_manager import ModelManager
 
 class ChatSession:
     def __init__(self, settings: ChatSettings):
+        """Initialize a chat session with the specified settings."""
         self.settings = settings
         self.model_name = settings.default_model
         self.messages: List[Dict[str, str]] = []
@@ -29,10 +30,10 @@ class ChatSession:
         """Initialize connection to MCP servers.
         
         Args:
-            server_paths: List of paths to MCP server scripts
+            server_paths (List[str]): List of paths to MCP server scripts.
             
         Returns:
-            bool: True if connection was successful, False otherwise
+            bool: True if connection was successful, False otherwise.
         """
         # Use MCPManager to initialize everything
         self.tools_enabled = await mcp_manager.initialize(server_paths)
@@ -45,16 +46,31 @@ class ChatSession:
         return self.tools_enabled
     
     def add_user_message(self, content: str) -> None:
-        """Add a user message to the chat history."""
+        """Add a user message to the chat history.
+        
+        Args:
+            content (str): The message content.
+        """
         self.messages.append({"role": "user", "content": content})
     
     def add_assistant_message(self, content: str) -> None:
-        """Add an assistant message to the chat history."""
+        """Add an assistant message to the chat history.
+        
+        Args:
+            content (str): The message content.
+        """
         self.messages.append({"role": "assistant", "content": content})
     
     async def send_message(self, user_message: str, session: aiohttp.ClientSession) -> str:
-        """Send the current message history to the Ollama API and stream the response."""
-
+        """Send the current message history to the Ollama API and stream the response.
+        
+        Args:
+            user_message (str): The user's message.
+            session (aiohttp.ClientSession): The session to use for the request.
+            
+        Returns:
+            str: The assistant's response.
+        """
         # Add user message
         self.add_user_message(user_message)
 
@@ -71,7 +87,11 @@ class ChatSession:
             return await self._handle_streaming_response(session, payload)
     
     def _prepare_request_payload(self) -> Dict[str, Any]:
-        """Prepare the request payload for the LLM API."""
+        """Prepare the request payload for the LLM API.
+        
+        Returns:
+            Dict[str, Any]: The prepared payload.
+        """
         payload = {
             "model": self.model_name,
             "messages": self.messages,
@@ -81,7 +101,14 @@ class ChatSession:
         return payload
     
     def _add_tools_to_payload(self, payload: Dict[str, Any]) -> Dict[str, Any]:
-        """Add tools to the payload if MCP is enabled."""
+        """Add tools to the payload if MCP is enabled.
+        
+        Args:
+            payload (Dict[str, Any]): The original payload.
+            
+        Returns:
+            Dict[str, Any]: The payload with tools added.
+        """
         # Add tools from the MCPManager if available
         tools = mcp_manager.get_ollama_tools()
         if tools:
@@ -91,7 +118,15 @@ class ChatSession:
         return payload
     
     async def _handle_non_streaming_response(self, session: aiohttp.ClientSession, payload: Dict[str, Any]) -> str:
-        """Handle a non-streaming response from the LLM API."""
+        """Handle a non-streaming response from the LLM API.
+        
+        Args:
+            session (aiohttp.ClientSession): The http session to use for the chat request.
+            payload (Dict[str, Any]): The request payload, containing the message history, possibly tools calls.
+            
+        Returns:
+            str: The assistant's response.
+        """
         async with session.post(f"{self.settings.ollama_api_url}/chat", json=payload) as response:
             if response.status != 200:
                 error_text = await response.text()
@@ -110,7 +145,15 @@ class ChatSession:
             return content
     
     async def _handle_streaming_response(self, session: aiohttp.ClientSession, payload: Dict[str, Any]) -> str:
-        """Handle a streaming response from the LLM API."""
+        """Handle a streaming response from the LLM API.
+        
+        Args:
+            session (aiohttp.ClientSession): The http session to use for the chat request.
+            payload (Dict[str, Any]): The request payload, containing the message history, possibly tools calls.
+            
+        Returns:
+            str: The assistant's response.
+        """
         async with session.post(f"{self.settings.ollama_api_url}/chat", json=payload) as response:
             if response.status != 200:
                 error_text = await response.text()
@@ -167,7 +210,15 @@ class ChatSession:
             return full_response
     
     async def _process_response_data(self, data: Dict[str, Any], message_tool_calls: List) -> Tuple[str, List]:
-        """Process response data and extract content and tool calls."""
+        """Process response data and extract content and tool calls.
+        
+        Args:
+            data (Dict[str, Any]): The response data to process, likely from the LLM.
+            message_tool_calls (List): List of processed tool calls.
+            
+        Returns:
+            Tuple[str, List]: The content and tool results.
+        """
         content = ""
         tool_results = []
         
@@ -184,17 +235,41 @@ class ChatSession:
         return content, tool_results
     
     def _has_tool_calls(self, data: Dict[str, Any]) -> bool:
-        """Check if the data contains tool calls."""
+        """Check if the data contains tool calls. This effectivelye checks for the presence of
+        the keys "message" and "tool_calls" in the data.
+        
+        Args:
+            data (Dict[str, Any]): The data to check from the LLM.
+            
+        Returns:
+            bool: True if the data contains tool calls, False otherwise.
+        """
         return ("message" in data and 
                 "tool_calls" in data["message"] and 
                 data["message"]["tool_calls"])
     
     def _has_message_content(self, data: Dict[str, Any]) -> bool:
-        """Check if the data contains message content."""
+        """Check if the data contains message content. This effectively checks for the presence of
+        the keys "message" and "content" in the data.
+        
+        Args:
+            data (Dict[str, Any]): The data to check.
+            
+        Returns:
+            bool: True if the data contains message content, False otherwise.
+        """
         return "message" in data and "content" in data["message"]
     
     async def _handle_streaming_tool_calls(self, data: Dict[str, Any], message_tool_calls: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Process tool calls from streaming response data."""
+        """Process tool calls from streaming response data.
+        
+        Args:
+            data (Dict[str, Any]): The response data from the LLM.
+            message_tool_calls (List[Dict[str, Any]]): List of processed tool calls.
+            
+        Returns:
+            List[Dict[str, Any]]: List of tool results.
+        """
         tool_results = []
         current_tool_calls = data["message"]["tool_calls"]
         self.debug_log.info(f"Found tool calls: {json.dumps(current_tool_calls)}")
@@ -217,7 +292,16 @@ class ChatSession:
         return tool_results
     
     async def _execute_tool(self, tool_id: str, function_name: str, arguments: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Execute a tool and return its result."""
+        """Execute a tool and return its result.
+        
+        Args:
+            tool_id (str): The ID of the tool.
+            function_name (str): The name of the function to execute.
+            arguments (Dict[str, Any]): The arguments to pass to the function.
+            
+        Returns:
+            Optional[Dict[str, Any]]: The tool result, or None if execution failed.
+        """
         try:
             # Format the tool call for the MCPManager
             formatted_tool_call = {
@@ -262,7 +346,13 @@ class ChatSession:
     
     def _update_message_history(self, full_response: str, message_tool_calls: List[Dict[str, Any]], 
                                      tool_results: List[Dict[str, Any]]) -> None:
-        """Update the message history with the response and tool results."""
+        """Update the message history with the response and tool results.
+        
+        Args:
+            full_response (str): The complete response from the LLM.
+            message_tool_calls (List[Dict[str, Any]]): List of tool calls from the response.
+            tool_results (List[Dict[str, Any]]): List of tool execution results.
+        """
         # Only update if we got a response or tool results
         if not full_response.strip() and not tool_results:
             return
@@ -287,13 +377,28 @@ class ChatSession:
                 self.messages.append(tool_result)
     
     def _should_format_with_tool_results(self, full_response: str) -> bool:
-        """Determine if we should send tool results back to the LLM for formatting."""
+        """Determine if we should send tool results back to the LLM for formatting.
+        
+        Args:
+            full_response (str): The complete response from the LLM.
+            
+        Returns:
+            bool: True if we should format with tool results, False otherwise.
+        """
         # If the response is empty or just whitespace, or doesn't contain a helpful response
         return not full_response.strip() or "I'll use a tool" in full_response
     
     async def _get_formatted_response_with_tool_results(self, session: aiohttp.ClientSession,  
                                                       tool_results: List[Dict[str, Any]]) -> Optional[str]:
-        """Send a follow-up request to the LLM to format the tool results."""
+        """Send a follow-up request to the LLM to format the tool results.
+        
+        Args:
+            session (aiohttp.ClientSession): The http session to use for the request to the LLM.
+            tool_results (List[Dict[str, Any]]): The tool results to format.
+            
+        Returns:
+            Optional[str]: The formatted response, or None if formatting failed.
+        """
         try:
             self.debug_log.info("Sending follow-up request to format tool results")
             
@@ -353,10 +458,10 @@ class ChatSession:
         """Process tool calls from a non-streaming response.
         
         Args:
-            tool_calls: List of tool calls from the LLM
+            tool_calls (List[Dict[str, Any]]): List of tool calls from the LLM.
             
         Returns:
-            List of tool results
+            List[Dict[str, Any]]: List of tool results.
         """
         # Similar to _handle_streaming_tool_calls but for non-streaming responses
         message_tool_calls = []
@@ -383,7 +488,15 @@ class ChatSession:
         return tool_results
 
     async def _process_tool_call(self, tool_call: Dict[str, Any], tool_id: str) -> Optional[Dict[str, Any]]:
-        """Process a single tool call and return the result."""
+        """Process a single tool call and return the result.
+        
+        Args:
+            tool_call (Dict[str, Any]): The tool call to process.
+            tool_id (str): The ID of the tool call.
+            
+        Returns:
+            Optional[Dict[str, Any]]: The tool result, or None if processing failed.
+        """
         function_name = tool_call["function"]["name"]
         arguments = tool_call["function"]["arguments"]
         
@@ -418,7 +531,12 @@ def print_chat_commands_help() -> None:
 
 # Update the interactive_chat function to use MCPManager for disconnection
 async def interactive_chat(settings: ChatSettings, debug_log: SessionDebugLog = None) -> None:
-    """Run an interactive chat session with message history."""
+    """Run an interactive chat session with message history.
+    
+    Args:
+        settings (ChatSettings): The chat settings to use.
+        debug_log (SessionDebugLog, optional): The debug log to use.
+    """
     # Create a chat session
     chat = ChatSession(settings)
     
@@ -492,11 +610,15 @@ async def interactive_chat(settings: ChatSettings, debug_log: SessionDebugLog = 
 
 # Update the main function to use MCPManager for MCP checks
 async def main(settings: ChatSettings) -> None:
-    """Main entry point for the application."""
+    """Main entry point for the application.
+    
+    Args:
+        settings (ChatSettings): The chat settings to use.
+    """
     
     # Create a debug log for the main session
     debug_log = logging_manager.get_session("ChatSession-Main",
-                                            logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+                                            logging.Formatter('%(asctime)s - %(name)s - %(levellevel)s - %(message)s'))
 
     # Create a model manager
     model_manager = ModelManager(settings, debug_log)

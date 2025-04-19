@@ -10,11 +10,28 @@ class ModelManager:
     """Manages model availability and downloading."""
     
     def __init__(self, settings: ChatSettings, debug_log: SessionDebugLog = None):
+        """Initialize the model manager.
+        
+        Args:
+            settings (ChatSettings): Settings for chat configuration.
+            debug_log (SessionDebugLog, optional): Logger for debugging messages.
+        """
         self.settings = settings
         self.debug_log = debug_log
     
     async def check_availability(self, session: aiohttp.ClientSession, model_name: str) -> bool:
-        """Check if a model is available in Ollama."""
+        """Check if a model is available in Ollama.
+        
+        Args:
+            session (aiohttp.ClientSession): HTTP session to use for the request to Ollama/tags.
+            model_name (str): Name of the model to check.
+            
+        Returns:
+            bool: True if the model is available, False otherwise.
+            
+        Raises:
+            Exception: If there is an error checking for model availability.
+        """
         try:
             async with session.get(f"{self.settings.ollama_api_url}/tags") as response:
                 if response.status == 200:
@@ -29,7 +46,15 @@ class ModelManager:
             raise Exception(f"Error checking available models: {e}")
     
     async def pull_model(self, session: aiohttp.ClientSession, model_name: str) -> None:
-        """Pull a model from Ollama."""
+        """Pull a model from Ollama.
+        
+        Args:
+            session (aiohttp.ClientSession): HTTP session to use for the request to Ollama/pull.
+            model_name (str): Name of the model to pull.
+            
+        Raises:
+            Exception: If there is an error pulling the model.
+        """
         self.debug_log.info(f"Model {model_name} is not available. Pulling the model.")
         
         try:
@@ -79,7 +104,12 @@ class ModelManager:
             raise Exception(error_msg)
             
     async def check_ollama_service(self) -> Tuple[bool, str]:
-        """Asynchronously check if Ollama service is available."""
+        """Asynchronously check if Ollama service is available. Effectively tries to
+        get the version of the service with Ollama/version (timeout 5 seconds).
+        
+        Returns:
+            Tuple[bool, str]: A tuple containing (is_available, message).
+        """
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.get(f"{self.settings.ollama_api_url}/version", timeout=5) as response:
@@ -92,13 +122,14 @@ class ModelManager:
             return False, f"Ollama service is not available: {e}"
             
     async def check_mcp_server(self, server_paths: List[str]) -> bool:
-        """Check if MCP servers are available.
+        """Check if it could connect to al least one MCP server in the list.
+        It cleanly disconnects from the server if the connection was successful.
         
         Args:
-            server_paths: List of paths to MCP server scripts
+            server_paths (List[str]): Paths to MCP server scripts.
             
         Returns:
-            bool: True if at least one MCP server is available, False otherwise
+            bool: True if at least one MCP server is available, False otherwise.
         """
         try:
             # Validate server paths

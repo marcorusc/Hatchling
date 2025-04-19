@@ -12,56 +12,59 @@ mcp = FastMCP("MCPArithmeticTools")
 
 @mcp.tool()
 def add(a: float, b: float) -> float:
-    """Add two numbers together and return the result.
+    """Add two numbers together.
     
     Args:
-        a: First number
-        b: Second number
+        a (float): First number.
+        b (float): Second number.
         
     Returns:
-        Sum of a and b
+        float: Sum of a and b.
     """
     log.info(f"Adding {a} + {b}")
     return a + b
 
 @mcp.tool()
 def subtract(a: float, b: float) -> float:
-    """Subtract second number from first number and return the result.
+    """Subtract second number from first number.
     
     Args:
-        a: First number
-        b: Second number
+        a (float): First number.
+        b (float): Second number.
         
     Returns:
-        Difference (a - b)
+        float: Difference (a - b).
     """
     log.info(f"Subtracting {a} - {b}")
     return a - b
 
 @mcp.tool()
 def multiply(a: float, b: float) -> float:
-    """Multiply two numbers together and return the result.
+    """Multiply two numbers together.
     
     Args:
-        a: First number
-        b: Second number
+        a (float): First number.
+        b (float): Second number.
         
     Returns:
-        Product of a and b
+        float: Product of a and b.
     """
     log.info(f"Multiplying {a} * {b}")
     return a * b
 
 @mcp.tool()
 def divide(a: float, b: float) -> float:
-    """Divide first number by second number and return the result.
+    """Divide first number by second number.
     
     Args:
-        a: First number (dividend)
-        b: Second number (divisor)
+        a (float): First number (dividend).
+        b (float): Second number (divisor).
         
     Returns:
-        Quotient (a / b)
+        float: Quotient (a / b).
+        
+    Raises:
+        ValueError: If the divisor (b) is zero.
     """
     if b == 0:
         log.error("Division by zero attempted")

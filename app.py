@@ -12,7 +12,11 @@ from mcp_utils.manager import mcp_manager
 log = logging_manager.get_session("AppMain", logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))                 
 
 async def main():
-    """Main entry point."""
+    """Main entry point for the application.
+    
+    Handles command-line arguments, initializes the chat environment,
+    and checks MCP servers availability.
+    """
     parser = argparse.ArgumentParser(description='LLM with MCP Tool Calling')
     parser.add_argument('--start-mcp-server', action='store_true', help='Start the MCP server automatically')
     parser.add_argument('--mcp-server-path', type=str, default='mcp_utils/servers/arithmetic.py',
