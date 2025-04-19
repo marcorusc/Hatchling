@@ -1,6 +1,6 @@
 import logging
 from mcp.server.fastmcp import FastMCP
-from logging_manager import logging_manager
+from core.logging.logging_manager import logging_manager
 
 # Get a logger from the logging_manager
 log = logging_manager.get_session("MCPArithmeticTools",

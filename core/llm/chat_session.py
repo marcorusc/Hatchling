@@ -4,13 +4,13 @@ import logging
 import json
 from typing import List, Dict, Tuple, Any, Optional
 
-# Replace OllamaMCPAdapter import with MCPManager
-from mcp_manager import mcp_manager
-# Import the logging_manager and SessionDebugLog classes
-from session_debug_log import SessionDebugLog
-from logging_manager import logging_manager
-from chat_settings import ChatSettings
-from llm_model_manager import ModelManager
+# Updated import path for MCPManager
+from mcp_utils.manager import mcp_manager
+# Updated import paths for logging and settings
+from core.logging.session_debug_log import SessionDebugLog
+from core.logging.logging_manager import logging_manager
+from config.settings import ChatSettings
+from core.llm.model_manager import ModelManager
 
 class ChatSession:
     def __init__(self, settings: ChatSettings):

@@ -4,8 +4,8 @@ import os
 import subprocess
 from typing import Dict, List, Any, Optional
 
-from mcp_client import MCPClient
-from logging_manager import logging_manager
+from mcp_utils.client import MCPClient
+from core.logging.logging_manager import logging_manager
 
 class MCPManager:
     """Centralized manager for everything MCP-related: servers, clients, and adapters"""
@@ -105,7 +105,7 @@ class MCPManager:
         
         if connected and not self._adapter:
             # Initialize the adapter
-            from ollama_mcp_adapter import OllamaMCPAdapter
+            from mcp_utils.ollama_adapter import OllamaMCPAdapter
             self._adapter = OllamaMCPAdapter()
             await self._adapter.build_schema_cache(self.get_tools_by_name())
             

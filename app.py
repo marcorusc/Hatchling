@@ -3,10 +3,10 @@ import asyncio
 import logging
 import os
 import argparse
-from logging_manager import logging_manager
-from chat_settings import ChatSettings
-import llm_chat
-from mcp_manager import mcp_manager
+from core.logging.logging_manager import logging_manager
+from config.settings import ChatSettings
+import core.llm.chat_session as chat_session
+from mcp_utils.manager import mcp_manager
 
 # Get logger with custom formatter - this takes advantage of our new implementation
 log = logging_manager.get_session("AppMain", logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))                 
@@ -15,8 +15,8 @@ async def main():
     """Main entry point."""
     parser = argparse.ArgumentParser(description='LLM with MCP Tool Calling')
     parser.add_argument('--start-mcp-server', action='store_true', help='Start the MCP server automatically')
-    parser.add_argument('--mcp-server-path', type=str, default='mcp_server_arithmetics.py',
-                        help='Path to the MCP server script (default: mcp_server_arithmetics.py)')
+    parser.add_argument('--mcp-server-path', type=str, default='mcp_utils/servers/arithmetic.py',
+                        help='Path to the MCP server script (default: mcp_utils/servers/arithmetic.py)')
     parser.add_argument('--model', type=str, default='mistral-small3.1',
                         help='Ollama model to use (default: mistral-small3.1)')
     args = parser.parse_args()
@@ -39,13 +39,13 @@ async def main():
                 log.error(f"Failed to start MCP server: {mcp_server_path}")
                 return
         
-        # Update MCP server path in llm_chat.py
+        # Update MCP server path in chat_session.py
         settings = ChatSettings(default_model=args.model, mcp_server_urls=[mcp_server_path])
         
         log.info(f"Using MCP server script: {mcp_server_path}")
         
-        # Run the llm_chat main function
-        await llm_chat.main(settings)
+        # Run the chat_session main function
+        await chat_session.main(settings)
         
     except KeyboardInterrupt:
         log.info("Application interrupted by user")

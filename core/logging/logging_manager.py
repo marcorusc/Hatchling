@@ -1,7 +1,7 @@
 import logging
 import io
 from typing import Dict, Optional, List, Union
-from session_debug_log import SessionDebugLog
+from core.logging.session_debug_log import SessionDebugLog
 
 
 class LoggingManager:

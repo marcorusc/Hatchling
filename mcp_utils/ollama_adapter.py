@@ -2,7 +2,7 @@ import json
 import asyncio
 import logging
 from typing import Dict, List, Any
-from logging_manager import logging_manager
+from core.logging.logging_manager import logging_manager
 
 class OllamaMCPAdapter:
     """Adapter to integrate Ollama's tool calling format with MCP tools."""

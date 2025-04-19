@@ -2,16 +2,17 @@ services:
   hatchling:
     image: hatchling
     build:
-      context: .
-      dockerfile: ./Dockerfile
+      context: ..
+      dockerfile: ./docker/Dockerfile
     volumes:
-      - ./:/app
-      - ./__temp__:/app/__temp__
+      - ../:/app_dev
+      - ../__temp__:/app/__temp__
     environment:
       # When using network_mode: host on Linux, use localhost
       - OLLAMA_API_URL=${OLLAMA_API_URL:-http://localhost:11434/api}
       - DEFAULT_MODEL=${DEFAULT_MODEL:-mistral-small3.1}
       - MCP_SERVER_PATH=${MCP_SERVER_PATH:-mcp_server_arithmetics.py}
+      - PYTHONPATH=/app
     network_mode: ${NETWORK_MODE}
     # Use Docker's built-in interactive mode
     tty: true
