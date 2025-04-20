@@ -2,6 +2,7 @@ import asyncio
 import aiohttp
 import logging
 import json
+import time  # Added import for tracking execution time
 from typing import List, Dict, Tuple, Any, Optional
 
 # Updated import path for MCPManager
@@ -25,6 +26,11 @@ class ChatSession:
         
         # MCP-related property
         self.tools_enabled = False
+        
+        # Tool calling control properties
+        self.current_tool_call_iteration = 0
+        self.tool_call_start_time = None
+        self.root_tool_query = None  # Track the original user query that started the tool sequence
     
     async def initialize_mcp(self, server_paths: List[str]) -> bool:
         """Initialize connection to MCP servers.
@@ -73,6 +79,11 @@ class ChatSession:
         """
         # Add user message
         self.add_user_message(user_message)
+        
+        # Reset tool calling counters for a new user message
+        self.current_tool_call_iteration = 0
+        self.tool_call_start_time = time.time()  # Start timing
+        self.root_tool_query = user_message  # Set the root query for this interaction
 
         # Prepare payload and send message to LLM
         payload = self._prepare_request_payload()
@@ -273,6 +284,9 @@ class ChatSession:
             Optional[Dict[str, Any]]: The tool result, or None if execution failed.
         """
         try:
+            # Increment the tool call iteration counter each time a tool is executed
+            self.current_tool_call_iteration += 1
+            
             # Format the tool call for the MCPManager
             formatted_tool_call = {
                 "id": tool_id,
@@ -468,6 +482,250 @@ class ChatSession:
         
         return None
 
+    async def _handle_streaming_response(self, session: aiohttp.ClientSession, payload: Dict[str, Any], 
+                                      is_initial_request: bool = True) -> str:
+        """Handle the response from the LLM API and try to improve tool calling if the
+            LLM has not chained it by itself.
+        
+        Args:
+            session (aiohttp.ClientSession): The http session to use for the request.
+            payload (Dict[str, Any]): The request payload with messages and tools.
+            is_initial_request (bool): Whether this is the initial user request.
+            
+        Returns:
+            str: The final response after all tool calls.
+        """
+        # Process the response using the streaming method
+        full_response, tool_results, message_tool_calls = await self._stream_llm_response(session, payload, is_initial_request)
+        
+        # If we have tool results, we need to decide what to do next
+        if tool_results:
+            elapsed_time = time.time() - self.tool_call_start_time
+            
+            # Check if we've hit limits
+            reached_max_iterations = self.current_tool_call_iteration >= self.settings.max_tool_call_iteration
+            reached_time_limit = elapsed_time >= self.settings.max_working_time
+            
+            if reached_max_iterations or reached_time_limit:
+                # We've reached a limit, generate a partial response
+                limit_reason = "maximum iterations" if reached_max_iterations else "time limit"
+                self.debug_log.warning(f"Reached {limit_reason} for tool calling ({self.current_tool_call_iteration} iterations, {elapsed_time:.1f}s)")
+                return await self._format_response_with_tool_results(
+                    session,
+                    tool_results=tool_results,
+                    is_final=False,
+                    limit_reason=limit_reason
+                )
+            
+            # Continue with sequential tool calling - prepare new payload with updated messages
+            #Write a prompt asking the LLM whether the tool results are enough to answer the question
+            self.debug_log.info("Preparing next payload for sequential tool calling")
+            self.messages.append({
+                "role": "user",
+                "content": f"Giiven the tool results: {tool_results}, do you have enough information to answer the original query: `{self.root_tool_query}`? If not, please ask for more information or continue using tools."
+            })
+            self.root_tool_query = self.messages[-1]["content"]  # Update the root query
+            # Prepare the next payload
+            next_payload = self._prepare_request_payload()
+            next_payload = self._add_tools_to_payload(next_payload)
+            
+            # Process the next step (recursive call)
+            self.debug_log.info(f"Continuing with tool calling iteration {self.current_tool_call_iteration}/{self.settings.max_tool_call_iteration} ({elapsed_time:.1f}s elapsed)")
+            return await self._handle_streaming_response(session, next_payload, is_initial_request=False)
+        
+        # No more tool results - formatting the final response if needed
+        if not is_initial_request:
+            # This was a tool-based conversation, format the final response
+            return await self._format_response_with_tool_results(session, is_final=True)
+        
+        # Return the original response if it was a direct LLM response with no tool usage
+        return full_response
+
+    async def _stream_llm_response(self, session: aiohttp.ClientSession, payload: Dict[str, Any], 
+                             print_output: bool = True) -> Tuple[str, List[Dict[str, Any]], List[Dict[str, Any]]]:
+        """Stream the LLM response and process any tool calls.
+        
+        Args:
+            session (aiohttp.ClientSession): The http session to use for the request.
+            payload (Dict[str, Any]): The request payload with messages and tools.
+            print_output (bool): Whether to print the response to the console.
+            
+        Returns:
+            Tuple[str, List[Dict[str, Any]], List[Dict[str, Any]]]: The response text, tool results, and tool calls.
+        """
+        full_response = ""
+        message_tool_calls = []
+        tool_results = []
+        
+        async with session.post(f"{self.settings.ollama_api_url}/chat", json=payload) as response:
+            if response.status != 200:
+                error_text = await response.text()
+                self.debug_log.error(f"Error: {response.status}, {error_text}")
+                raise Exception(f"Error: {response.status}, {error_text}")
+            
+            async for line in response.content.iter_any():
+                if not line:
+                    continue
+                
+                try:
+                    line_text = line.decode('utf-8').strip()
+                    if not line_text:
+                        continue
+                    
+                    # Debug log the raw response
+                    self.debug_log.debug(f"Raw response: {line_text}")
+                    
+                    # Parse the JSON response
+                    data = json.loads(line_text)
+                    
+                    # Process the response data
+                    content, current_tool_results = await self._process_response_data(data, message_tool_calls)
+                    if content:
+                        if print_output:
+                            print(content, end="", flush=True)
+                        full_response += content
+                    if current_tool_results:
+                        tool_results.extend(current_tool_results)
+                    
+                    # Check if this is the last message
+                    if data.get("done", False):
+                        if print_output:
+                            print()  # Add a newline after completion
+                        break
+                    
+                except json.JSONDecodeError as e:
+                    self.debug_log.error(f"Invalid JSON: {e}")
+                except Exception as e:
+                    self.debug_log.error(f"Error processing response: {e}")
+        
+        # Update message history with the response and tool calls
+        self._update_message_history(full_response, message_tool_calls, tool_results)
+        
+        return full_response, tool_results, message_tool_calls
+
+    async def _format_response_with_tool_results(self, session: aiohttp.ClientSession,
+                                          tool_results: List[Dict[str, Any]] = None,
+                                          is_final: bool = True,
+                                          limit_reason: str = None) -> str:
+        """Format a response based on tool results.
+        
+        Args:
+            session (aiohttp.ClientSession): The http session to use for the request.
+            tool_results (List[Dict[str, Any]], optional): The tool results to format.
+            is_final (bool): Whether this is the final response (True) or partial (False).
+            limit_reason (str, optional): If partial, the reason for stopping (max iterations or time limit).
+            
+        Returns:
+            str: The formatted response.
+        """
+        try:
+            response_type = "final" if is_final else "partial"
+            self.debug_log.info(f"Generating {response_type} response for tool operations")
+            
+            # Save original messages
+            original_messages = self.messages.copy()
+            
+            # Build the prompt based on whether it's a final or partial response
+            prompt = f"I used tools in reaction to: `{self.root_tool_query}`."
+            
+            if not is_final and limit_reason:
+                prompt += f" However, I reached {limit_reason} ({self.current_tool_call_iteration} iterations).\n\n"
+                if tool_results:
+                    # Convert tool results to a simpler string format to prevent JSON issues
+                    simple_results = []
+                    for result in tool_results:
+                        simple_results.append({
+                            "name": result.get("name", "unknown"),
+                            "content": result.get("content", "No content")
+                        })
+                    prompt += f"Here are the tool results: {simple_results}.\n\n"
+                prompt += "Provide a partial answer based on these results and ask if the user wants to continue processing."
+            else:  # final response
+                prompt += "\n\n"
+                if tool_results:
+                    # Convert tool results to a simpler string format
+                    simple_results = []
+                    for result in tool_results:
+                        simple_results.append({
+                            "name": result.get("name", "unknown"), 
+                            "content": result.get("content", "No content")
+                        })
+                    prompt += f"Here are the tool results: {simple_results}.\n\n"
+                prompt += "Please provide a comprehensive final answer to the original question based on all the tool operations."
+                prompt += " Use clear formatting and explanations."
+            
+            # Create the formatting request with string content only
+            format_request = {
+                "role": "user",
+                "content": prompt
+            }
+            
+            # Create a clean message history with just what we need for formatting
+            clean_messages = []
+            
+            # Include the root query for context
+            clean_messages.append({
+                "role": "user",
+                "content": self.root_tool_query
+            })
+            
+            # Add the formatting request
+            clean_messages.append(format_request)
+            
+            # Create a new payload without tools (we don't want more tool calls in the formatted response)
+            payload = {
+                "model": self.model_name,
+                "messages": clean_messages,
+                "stream": True
+            }
+            
+            # Get the formatted response
+            prefix = f"\n{response_type.capitalize()} response based on tool results:"
+            print(prefix)
+            
+            formatted_response = ""
+            
+            async with session.post(f"{self.settings.ollama_api_url}/chat", json=payload) as response:
+                if response.status != 200:
+                    self.debug_log.error(f"Failed to get {response_type} response: {response.status}")
+                    error_text = await response.text()
+                    self.debug_log.error(f"Error details: {error_text}")
+                    return f"Error obtaining {response_type} response."
+                
+                async for line in response.content.iter_any():
+                    if not line:
+                        continue
+                    
+                    try:
+                        line_text = line.decode('utf-8').strip()
+                        if not line_text:
+                            continue
+                        
+                        data = json.loads(line_text)
+                        
+                        if "message" in data and "content" in data["message"]:
+                            content = data["message"]["content"]
+                            print(content, end="", flush=True)
+                            formatted_response += content
+                        
+                        if data.get("done", False):
+                            print()  # Add a newline after completion
+                            break
+                        
+                    except Exception as e:
+                        self.debug_log.error(f"Error processing {response_type} response: {e}")
+            
+            # Add the formatted response as an assistant message
+            if formatted_response:
+                self.add_assistant_message(formatted_response)
+            
+            return formatted_response
+        
+        except Exception as e:
+            response_type = "final" if is_final else "partial"
+            self.debug_log.error(f"Error formatting {response_type} response: {e}")
+            return f"Error formatting the response after tool operations."
+
 def print_chat_commands_help() -> None:
     """Print help for chat commands."""
     print("\n=== Chat Commands ===")
@@ -479,6 +737,8 @@ def print_chat_commands_help() -> None:
     print("Type 'set_log_level <level>' to change the log level (debug, info, warning, error, critical)")
     print("Type 'enable_tools' to enable MCP tools")
     print("Type 'disable_tools' to disable MCP tools")
+    print("Type 'set_max_tool_call_iterations <n>' to set the maximum number of tool call iterations")
+    print("Type 'set_max_working_time <seconds>' to set the maximum working time for tool operations in seconds")
     print("======================\n")
 
 # Update the interactive_chat function to use MCPManager for disconnection
@@ -531,6 +791,34 @@ async def interactive_chat(settings: ChatSettings, debug_log: SessionDebugLog = 
                         debug_log.info(f"Log level set to {level_name}")
                     else:
                         debug_log.error(f"Unknown log level: {level_name}")
+                    continue
+                elif user_message.startswith('set_max_tool_call_iterations '):
+                    try:
+                        iterations = int(user_message.split(' ')[1])
+                        if iterations > 0:
+                            chat.settings.max_tool_call_iteration = iterations
+                            debug_log.info(f"Maximum tool call iterations set to {iterations}")
+                            print(f"Maximum tool call iterations set to {iterations}")
+                        else:
+                            debug_log.error("Maximum iterations must be greater than 0")
+                            print("Maximum iterations must be greater than 0")
+                    except (ValueError, IndexError):
+                        debug_log.error("Invalid value for maximum iterations")
+                        print("Usage: set_max_tool_call_iterations <positive integer>")
+                    continue
+                elif user_message.startswith('set_max_working_time '):
+                    try:
+                        seconds = float(user_message.split(' ')[1])
+                        if seconds > 0:
+                            chat.settings.max_working_time = seconds
+                            debug_log.info(f"Maximum working time set to {seconds} seconds")
+                            print(f"Maximum working time set to {seconds} seconds")
+                        else:
+                            debug_log.error("Maximum working time must be greater than 0")
+                            print("Maximum working time must be greater than 0")
+                    except (ValueError, IndexError):
+                        debug_log.error("Invalid value for maximum working time")
+                        print("Usage: set_max_working_time <positive number>")
                     continue
                 elif user_message == 'enable_tools':
                     connected = await chat.initialize_mcp(settings.mcp_server_urls)
