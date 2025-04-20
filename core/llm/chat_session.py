@@ -135,60 +135,21 @@ class ChatSession:
         Returns:
             str: The assistant's response.
         """
-        async with session.post(f"{self.settings.ollama_api_url}/chat", json=payload) as response:
-            if response.status != 200:
-                error_text = await response.text()
-                self.debug_log.error(f"Error: {response.status}, {error_text}")
-                raise Exception(f"Error: {response.status}, {error_text}")
-            
-            # Process the streaming response
-            full_response = ""
-            message_tool_calls = []
-            tool_results = []
-            
-            async for line in response.content.iter_any():
-                if not line:
-                    continue
-                    
-                try:
-                    line_text = line.decode('utf-8').strip()
-                    if not line_text:
-                        continue
-                    
-                    # Debug log the raw response
-                    self.debug_log.debug(f"Raw response: {line_text}")
-                    
-                    # Parse the JSON response
-                    data = json.loads(line_text)
-                    
-                    # Process the response data
-                    content, current_tool_results = await self._process_response_data(data, message_tool_calls)
-                    if content:
-                        print(content, end="", flush=True)
-                        full_response += content
-                    if current_tool_results:
-                        tool_results.extend(current_tool_results)
-                    
-                    # Check if this is the last message
-                    if data.get("done", False):
-                        print()  # Add a newline after completion
-                        break
-                        
-                except json.JSONDecodeError as e:
-                    self.debug_log.error(f"Invalid JSON: {e}")
-                except Exception as e:
-                    self.debug_log.error(f"Error processing response: {e}")
-            
-            # Post-processing: update message history and handle tool results
-            self._update_message_history(full_response, message_tool_calls, tool_results)
-            
-            # If we have tool results, send another message to the LLM with the tool results for formatting
-            if tool_results and self._should_format_with_tool_results(full_response):
-                formatted_response = await self._get_formatted_response_with_tool_results(session, tool_results)
-                if formatted_response:
-                    return formatted_response
-            
-            return full_response
+        # Use our helper method for streaming the response
+        full_response, message_tool_calls, tool_results = await self._stream_response_from_api(
+            session, payload, print_output=True
+        )
+        
+        # Post-processing: update message history and handle tool results
+        self._update_message_history(full_response, message_tool_calls, tool_results)
+        
+        # If we have tool results, send another message to the LLM with the tool results for formatting
+        if tool_results and self._should_format_with_tool_results(full_response):
+            formatted_response = await self._get_formatted_response_with_tool_results(session, tool_results)
+            if formatted_response:
+                return formatted_response
+        
+        return full_response
     
     async def _process_response_data(self, data: Dict[str, Any], message_tool_calls: List) -> Tuple[str, List]:
         """Process response data and extract content and tool calls.
@@ -553,50 +514,9 @@ class ChatSession:
         Returns:
             Tuple[str, List[Dict[str, Any]], List[Dict[str, Any]]]: The response text, tool results, and tool calls.
         """
-        full_response = ""
-        message_tool_calls = []
-        tool_results = []
-        
-        async with session.post(f"{self.settings.ollama_api_url}/chat", json=payload) as response:
-            if response.status != 200:
-                error_text = await response.text()
-                self.debug_log.error(f"Error: {response.status}, {error_text}")
-                raise Exception(f"Error: {response.status}, {error_text}")
-            
-            async for line in response.content.iter_any():
-                if not line:
-                    continue
-                
-                try:
-                    line_text = line.decode('utf-8').strip()
-                    if not line_text:
-                        continue
-                    
-                    # Debug log the raw response
-                    self.debug_log.debug(f"Raw response: {line_text}")
-                    
-                    # Parse the JSON response
-                    data = json.loads(line_text)
-                    
-                    # Process the response data
-                    content, current_tool_results = await self._process_response_data(data, message_tool_calls)
-                    if content:
-                        if print_output:
-                            print(content, end="", flush=True)
-                        full_response += content
-                    if current_tool_results:
-                        tool_results.extend(current_tool_results)
-                    
-                    # Check if this is the last message
-                    if data.get("done", False):
-                        if print_output:
-                            print()  # Add a newline after completion
-                        break
-                    
-                except json.JSONDecodeError as e:
-                    self.debug_log.error(f"Invalid JSON: {e}")
-                except Exception as e:
-                    self.debug_log.error(f"Error processing response: {e}")
+        full_response, message_tool_calls, tool_results = await self._stream_response_from_api(
+            session, payload, print_output=print_output
+        )
         
         # Update message history with the response and tool calls
         self._update_message_history(full_response, message_tool_calls, tool_results)
@@ -679,52 +599,84 @@ class ChatSession:
                 "stream": True
             }
             
-            # Get the formatted response
+            # Get the formatted response using our shared helper
             prefix = f"\n{response_type.capitalize()} response based on tool results:"
-            print(prefix)
-            
-            formatted_response = ""
-            
-            async with session.post(f"{self.settings.ollama_api_url}/chat", json=payload) as response:
-                if response.status != 200:
-                    self.debug_log.error(f"Failed to get {response_type} response: {response.status}")
-                    error_text = await response.text()
-                    self.debug_log.error(f"Error details: {error_text}")
-                    return f"Error obtaining {response_type} response."
-                
-                async for line in response.content.iter_any():
-                    if not line:
-                        continue
-                    
-                    try:
-                        line_text = line.decode('utf-8').strip()
-                        if not line_text:
-                            continue
-                        
-                        data = json.loads(line_text)
-                        
-                        if "message" in data and "content" in data["message"]:
-                            content = data["message"]["content"]
-                            print(content, end="", flush=True)
-                            formatted_response += content
-                        
-                        if data.get("done", False):
-                            print()  # Add a newline after completion
-                            break
-                        
-                    except Exception as e:
-                        self.debug_log.error(f"Error processing {response_type} response: {e}")
+            full_response, _, _ = await self._stream_response_from_api(
+                session, payload, print_output=True, prefix=prefix
+            )
             
             # Add the formatted response as an assistant message
-            if formatted_response:
-                self.add_assistant_message(formatted_response)
+            if full_response:
+                self.add_assistant_message(full_response)
             
-            return formatted_response
+            return full_response
         
         except Exception as e:
             response_type = "final" if is_final else "partial"
             self.debug_log.error(f"Error formatting {response_type} response: {e}")
             return f"Error formatting the response after tool operations."
+
+    async def _stream_response_from_api(self, session, payload, print_output=True, prefix=None):
+        """Stream a response from the API and handle common processing.
+        
+        Args:
+            session: The aiohttp client session to use
+            payload: The request payload to send to the API
+            print_output: Whether to print the output to the console
+            prefix: Optional prefix to print before the response
+            
+        Returns:
+            tuple: (full_response, message_tool_calls, tool_results)
+        """
+        full_response = ""
+        message_tool_calls = []
+        tool_results = []
+        
+        if prefix and print_output:
+            print(prefix)
+            
+        async with session.post(f"{self.settings.ollama_api_url}/chat", json=payload) as response:
+            if response.status != 200:
+                error_text = await response.text()
+                self.debug_log.error(f"Error: {response.status}, {error_text}")
+                raise Exception(f"Error: {response.status}, {error_text}")
+            
+            async for line in response.content.iter_any():
+                if not line:
+                    continue
+                
+                try:
+                    line_text = line.decode('utf-8').strip()
+                    if not line_text:
+                        continue
+                    
+                    # Debug log the raw response
+                    self.debug_log.debug(f"Raw response: {line_text}")
+                    
+                    # Parse the JSON response
+                    data = json.loads(line_text)
+                    
+                    # Process the response data
+                    content, current_tool_results = await self._process_response_data(data, message_tool_calls)
+                    if content:
+                        if print_output:
+                            print(content, end="", flush=True)
+                        full_response += content
+                    if current_tool_results:
+                        tool_results.extend(current_tool_results)
+                    
+                    # Check if this is the last message
+                    if data.get("done", False):
+                        if print_output:
+                            print()  # Add a newline after completion
+                        break
+                    
+                except json.JSONDecodeError as e:
+                    self.debug_log.error(f"Invalid JSON: {e}")
+                except Exception as e:
+                    self.debug_log.error(f"Error processing response: {e}")
+        
+        return full_response, message_tool_calls, tool_results
 
 def print_chat_commands_help() -> None:
     """Print help for chat commands."""
