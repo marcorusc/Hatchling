@@ -18,10 +18,10 @@ class ChatSession:
         self.settings = settings
         self.model_name = settings.default_model
         self.messages: List[Dict[str, str]] = []
-        self.is_streaming = True
+        # is_streaming property removed as everything will be streaming
         # Get session-specific logger from the manager
         self.debug_log = logging_manager.get_session(f"ChatSession-{self.model_name}",
-                                  formatter=logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+                                  formatter=logging.Formatter('%(asctime)s - %(name)s - %(levellevel)s - %(message)s'))
         
         # MCP-related property
         self.tools_enabled = False
@@ -80,11 +80,8 @@ class ChatSession:
         if self.tools_enabled:
             payload = self._add_tools_to_payload(payload)
         
-        # Send the request and process the response
-        if not self.is_streaming:
-            return await self._handle_non_streaming_response(session, payload)
-        else:
-            return await self._handle_streaming_response(session, payload)
+        # Always use streaming
+        return await self._handle_streaming_response(session, payload)
     
     def _prepare_request_payload(self) -> Dict[str, Any]:
         """Prepare the request payload for the LLM API.
@@ -95,7 +92,7 @@ class ChatSession:
         payload = {
             "model": self.model_name,
             "messages": self.messages,
-            "stream": self.is_streaming
+            "stream": True  # Always stream
         }
         self.debug_log.debug(f"Prepared payload: {json.dumps(payload)}")
         return payload
@@ -116,33 +113,6 @@ class ChatSession:
             payload["tool_choice"] = "auto"
             self.debug_log.debug(f"Added {len(tools)} tools to payload")
         return payload
-    
-    async def _handle_non_streaming_response(self, session: aiohttp.ClientSession, payload: Dict[str, Any]) -> str:
-        """Handle a non-streaming response from the LLM API.
-        
-        Args:
-            session (aiohttp.ClientSession): The http session to use for the chat request.
-            payload (Dict[str, Any]): The request payload, containing the message history, possibly tools calls.
-            
-        Returns:
-            str: The assistant's response.
-        """
-        async with session.post(f"{self.settings.ollama_api_url}/chat", json=payload) as response:
-            if response.status != 200:
-                error_text = await response.text()
-                self.debug_log.error(f"Error: {response.status}, {error_text}")
-                raise Exception(f"Error: {response.status}, {error_text}")
-            
-            data = await response.json()
-            content = data["message"]["content"]
-            print(content)
-            self.add_assistant_message(content)
-            
-            # Check for tool calls in the non-streaming response
-            if "tool_calls" in data["message"] and data["message"]["tool_calls"]:
-                await self._process_tool_calls(data["message"]["tool_calls"])
-                
-            return content
     
     async def _handle_streaming_response(self, session: aiohttp.ClientSession, payload: Dict[str, Any]) -> str:
         """Handle a streaming response from the LLM API.
@@ -421,29 +391,44 @@ class ChatSession:
             # Add this as a new message
             self.messages.append(format_request)
             
-            # Create a payload for a non-streaming request (for simplicity)
-            old_streaming = self.is_streaming
-            self.is_streaming = False
-            
-            # Use the existing prepare_request_payload method but disable tools
+            # Use the existing prepare_request_payload method
             payload = self._prepare_request_payload()
             
-            # Make the request
+            # Use streaming for this request too
+            formatted_response = ""
+            print("\nFormatted response based on tool results:")
+            
             async with session.post(f"{self.settings.ollama_api_url}/chat", json=payload) as response:
                 if response.status != 200:
                     self.debug_log.error("Failed to get formatted response")
                     return None
                 
-                data = await response.json()
-                formatted_response = data["message"]["content"]
-            
-            # Print the formatted response
-            print("\nFormatted response based on tool results:")
-            print(formatted_response)
+                async for line in response.content.iter_any():
+                    if not line:
+                        continue
+                        
+                    try:
+                        line_text = line.decode('utf-8').strip()
+                        if not line_text:
+                            continue
+                        
+                        data = json.loads(line_text)
+                        
+                        if "message" in data and "content" in data["message"]:
+                            content = data["message"]["content"]
+                            print(content, end="", flush=True)
+                            formatted_response += content
+                            
+                        # Check if this is the last message
+                        if data.get("done", False):
+                            print()  # Add a newline after completion
+                            break
+                            
+                    except Exception as e:
+                        self.debug_log.error(f"Error processing formatted response: {e}")
             
             # Restore original state
             self.messages = original_messages
-            self.is_streaming = old_streaming
             
             # Add the formatted response as an assistant message
             self.add_assistant_message(formatted_response)
@@ -453,39 +438,6 @@ class ChatSession:
         except Exception as e:
             self.debug_log.error(f"Error formatting with tool results: {e}")
             return None
-
-    async def _process_tool_calls(self, tool_calls: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Process tool calls from a non-streaming response.
-        
-        Args:
-            tool_calls (List[Dict[str, Any]]): List of tool calls from the LLM.
-            
-        Returns:
-            List[Dict[str, Any]]: List of tool results.
-        """
-        # Similar to _handle_streaming_tool_calls but for non-streaming responses
-        message_tool_calls = []
-        tool_results = []
-        
-        for tool_call in tool_calls:
-            tool_id = tool_call.get("id", "unknown")
-            message_tool_calls.append(tool_call)
-            
-            # Process the tool call
-            tool_result = await self._process_tool_call(tool_call, tool_id)
-            if tool_result:
-                tool_results.append(tool_result)
-        
-        # Update message history with tool calls and results
-        if message_tool_calls and self.messages and self.messages[-1]["role"] == "assistant":
-            # Add tool calls to the last assistant message
-            self.messages[-1]["tool_calls"] = message_tool_calls
-            
-            # Add tool results to the conversation
-            for tool_result in tool_results:
-                self.messages.append(tool_result)
-                
-        return tool_results
 
     async def _process_tool_call(self, tool_call: Dict[str, Any], tool_id: str) -> Optional[Dict[str, Any]]:
         """Process a single tool call and return the result.
