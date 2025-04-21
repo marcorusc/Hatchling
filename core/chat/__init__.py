@@ -1,0 +1,1 @@
+# core/chat package initialization

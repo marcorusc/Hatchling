@@ -12,6 +12,7 @@ from core.logging.session_debug_log import SessionDebugLog
 from core.logging.logging_manager import logging_manager
 from config.settings import ChatSettings
 from core.llm.model_manager import ModelManager
+from core.chat.chat_command_handler import ChatCommandHandler
 
 class ChatSession:
     def __init__(self, settings: ChatSettings):
@@ -678,22 +679,7 @@ class ChatSession:
         
         return full_response, message_tool_calls, tool_results
 
-def print_chat_commands_help() -> None:
-    """Print help for chat commands."""
-    print("\n=== Chat Commands ===")
-    print("Type 'help' for this help message")
-    print()
-    print("Type 'exit' or 'quit' to end the chat")
-    print("Type 'clear' to clear the chat history")
-    print("Type 'show_logs <n: int, optional>' to display the last n entries in the session logs, or everything by default.")
-    print("Type 'set_log_level <level>' to change the log level (debug, info, warning, error, critical)")
-    print("Type 'enable_tools' to enable MCP tools")
-    print("Type 'disable_tools' to disable MCP tools")
-    print("Type 'set_max_tool_call_iterations <n>' to set the maximum number of tool call iterations")
-    print("Type 'set_max_working_time <seconds>' to set the maximum working time for tool operations in seconds")
-    print("======================\n")
-
-# Update the interactive_chat function to use MCPManager for disconnection
+# Update the interactive_chat function to use ChatCommandHandler
 async def interactive_chat(settings: ChatSettings, debug_log: SessionDebugLog = None) -> None:
     """Run an interactive chat session with message history.
     
@@ -704,8 +690,11 @@ async def interactive_chat(settings: ChatSettings, debug_log: SessionDebugLog = 
     # Create a chat session
     chat = ChatSession(settings)
     
+    # Create command handler
+    cmd_handler = ChatCommandHandler(chat, settings, debug_log)
+    
     debug_log.info(f"Starting interactive chat with {settings.default_model}")
-    print_chat_commands_help()
+    cmd_handler.print_commands_help()
     
     async with aiohttp.ClientSession() as session:
         while True:
@@ -714,84 +703,22 @@ async def interactive_chat(settings: ChatSettings, debug_log: SessionDebugLog = 
                 status = "[Tools enabled]" if chat.tools_enabled else "[Tools disabled]"
                 user_message = input(f"{status} You: ")
                 
-                # Handle special commands
-                if user_message == 'help':
-                    print_chat_commands_help()
+                # Process as command if applicable
+                is_command, should_continue = await cmd_handler.process_command(user_message)
+                if is_command:
+                    if not should_continue:
+                        break
                     continue
-                elif user_message in ['exit', 'quit']:
-                    print("Ending chat session...")
-                    break
-                elif user_message == 'clear':
-                    chat.messages = []
-                    print("Chat history cleared!")
-                    continue
-                elif user_message.startswith('show_logs'):
-                    logs_to_show = int(user_message.split(' ')[1]) if len(user_message.split(' ')) > 1 else None
-                    print(chat.debug_log.get_logs(logs_to_show))
-                    continue
-                elif user_message.startswith('set_log_level '):
-                    level_name = user_message.split(' ')[1]
-                    level_map = {
-                        "debug": logging.DEBUG,
-                        "info": logging.INFO,
-                        "warning": logging.WARNING,
-                        "error": logging.ERROR, 
-                        "critical": logging.CRITICAL
-                    }
-                    if level_name in level_map:
-                        logging_manager.set_cli_log_level(level_map[level_name])
-                        debug_log.info(f"Log level set to {level_name}")
-                    else:
-                        debug_log.error(f"Unknown log level: {level_name}")
-                    continue
-                elif user_message.startswith('set_max_tool_call_iterations '):
-                    try:
-                        iterations = int(user_message.split(' ')[1])
-                        if iterations > 0:
-                            chat.settings.max_tool_call_iteration = iterations
-                            debug_log.info(f"Maximum tool call iterations set to {iterations}")
-                            print(f"Maximum tool call iterations set to {iterations}")
-                        else:
-                            debug_log.error("Maximum iterations must be greater than 0")
-                            print("Maximum iterations must be greater than 0")
-                    except (ValueError, IndexError):
-                        debug_log.error("Invalid value for maximum iterations")
-                        print("Usage: set_max_tool_call_iterations <positive integer>")
-                    continue
-                elif user_message.startswith('set_max_working_time '):
-                    try:
-                        seconds = float(user_message.split(' ')[1])
-                        if seconds > 0:
-                            chat.settings.max_working_time = seconds
-                            debug_log.info(f"Maximum working time set to {seconds} seconds")
-                            print(f"Maximum working time set to {seconds} seconds")
-                        else:
-                            debug_log.error("Maximum working time must be greater than 0")
-                            print("Maximum working time must be greater than 0")
-                    except (ValueError, IndexError):
-                        debug_log.error("Invalid value for maximum working time")
-                        print("Usage: set_max_working_time <positive number>")
-                    continue
-                elif user_message == 'enable_tools':
-                    connected = await chat.initialize_mcp(settings.mcp_server_urls)
-                    if not connected:
-                         debug_log.error("Failed to connect to MCP servers. Tools not enabled.")
-                    continue
-                elif user_message == 'disable_tools':
-                    if chat.tools_enabled:
-                        await mcp_manager.disconnect_all()
-                        chat.tools_enabled = False
-                        # Remove the system message if it exists
-                        chat.messages = [msg for msg in chat.messages if msg.get("role") != "system"]
-                    continue
-                elif not user_message.strip():
+                
+                # Handle normal message
+                if not user_message.strip():
                     # Skip empty input
                     continue
-                else:
-                    # Send the query
-                    print("\nAssistant: ", end="", flush=True)
-                    await chat.send_message(user_message, session)
-                    print()  # Add an extra newline for readability
+                
+                # Send the query
+                print("\nAssistant: ", end="", flush=True)
+                await chat.send_message(user_message, session)
+                print()  # Add an extra newline for readability
                 
             except KeyboardInterrupt:
                 print("\nInterrupted. Ending chat session...")
