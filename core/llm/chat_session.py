@@ -88,12 +88,28 @@ class ChatSession:
 
         # Prepare payload and send message to LLM
         payload = self._prepare_request_payload()
-        
         if self.tools_enabled:
             payload = self._add_tools_to_payload(payload)
         
-        # Always use streaming
-        return await self._handle_streaming_response(session, payload)
+        # Process the initial response
+        full_response, message_tool_calls, tool_results = await self._stream_response_from_api(
+            session, payload, print_output=True, update_history=True
+        )
+        
+        # Check if we have tool results that need further processing
+        if self.tools_enabled and self.current_tool_call_iteration > 0:
+            # Only process tool calling chains if we've started using tools
+            full_response, message_tool_calls, tool_results = await self._handle_tool_calling_chain(
+                                                        session,
+                                                        full_response,
+                                                        message_tool_calls,
+                                                        tool_results)
+        
+        # If we have tool results, send another message to the LLM with the tool results for formatting
+        #if tool_results:
+            full_response = await self._get_formatted_response_with_tool_results(session, tool_results)
+
+        return full_response
     
     def _prepare_request_payload(self) -> Dict[str, Any]:
         """Prepare the request payload for the LLM API.
@@ -125,32 +141,6 @@ class ChatSession:
             payload["tool_choice"] = "auto"
             self.debug_log.debug(f"Added {len(tools)} tools to payload")
         return payload
-    
-    async def _handle_streaming_response(self, session: aiohttp.ClientSession, payload: Dict[str, Any]) -> str:
-        """Handle a streaming response from the LLM API.
-        
-        Args:
-            session (aiohttp.ClientSession): The http session to use for the chat request.
-            payload (Dict[str, Any]): The request payload, containing the message history, possibly tools calls.
-            
-        Returns:
-            str: The assistant's response.
-        """
-        # Use our helper method for streaming the response
-        full_response, message_tool_calls, tool_results = await self._stream_response_from_api(
-            session, payload, print_output=True
-        )
-        
-        # Post-processing: update message history and handle tool results
-        self._update_message_history(full_response, message_tool_calls, tool_results)
-        
-        # If we have tool results, send another message to the LLM with the tool results for formatting
-        if tool_results and self._should_format_with_tool_results(full_response):
-            formatted_response = await self._get_formatted_response_with_tool_results(session, tool_results)
-            if formatted_response:
-                return formatted_response
-        
-        return full_response
     
     async def _process_response_data(self, data: Dict[str, Any], message_tool_calls: List) -> Tuple[str, List]:
         """Process response data and extract content and tool calls.
@@ -444,21 +434,25 @@ class ChatSession:
         
         return None
 
-    async def _handle_streaming_response(self, session: aiohttp.ClientSession, payload: Dict[str, Any], 
-                                      is_initial_request: bool = True) -> str:
-        """Handle the response from the LLM API and try to improve tool calling if the
-            LLM has not chained it by itself.
+    async def _handle_tool_calling_chain(self,
+                    session: aiohttp.ClientSession,
+                    full_response: str,
+                    message_tool_calls: List[Dict[str, Any]],
+                    tool_results: List[Dict[str, Any]]
+                    ) -> str:
+        """Handle the response from the LLM API and manage tool calling chains.
         
         Args:
             session (aiohttp.ClientSession): The http session to use for the request.
-            payload (Dict[str, Any]): The request payload with messages and tools.
-            is_initial_request (bool): Whether this is the initial user request.
-            
+            full_response (str): The latest response from the LLM.
+            message_tool_calls (List[Dict[str, Any]]): List of tool calls from the response.
+            tool_results (List[Dict[str, Any]]): List of tool execution results.
+                        
         Returns:
             str: The final response after all tool calls.
         """
-        # Process the response using the streaming method
-        full_response, tool_results, message_tool_calls = await self._stream_llm_response(session, payload, is_initial_request)
+
+        _full_response, _message_tool_calls, _tool_results = full_response, message_tool_calls, tool_results
         
         # If we have tool results, we need to decide what to do next
         if tool_results:
@@ -484,45 +478,93 @@ class ChatSession:
             self.debug_log.info("Preparing next payload for sequential tool calling")
             self.messages.append({
                 "role": "user",
-                "content": f"Giiven the tool results: {tool_results}, do you have enough information to answer the original query: `{self.root_tool_query}`? If not, please ask for more information or continue using tools."
+                "content": f"Given the tool results: {tool_results}, do you have enough information to answer the original query: `{self.root_tool_query}`? If not, please ask for more information or continue using tools."
             })
-            self.root_tool_query = self.messages[-1]["content"]  # Update the root query
+            
             # Prepare the next payload
             next_payload = self._prepare_request_payload()
             next_payload = self._add_tools_to_payload(next_payload)
             
+            _full_response, _message_tool_calls, _tool_results = await self._stream_response_from_api(
+                 session, next_payload, print_output=False, update_history=True
+             )
+
             # Process the next step (recursive call)
             self.debug_log.info(f"Continuing with tool calling iteration {self.current_tool_call_iteration}/{self.settings.max_tool_call_iteration} ({elapsed_time:.1f}s elapsed)")
-            return await self._handle_streaming_response(session, next_payload, is_initial_request=False)
-        
-        # No more tool results - formatting the final response if needed
-        if not is_initial_request:
-            # This was a tool-based conversation, format the final response
-            return await self._format_response_with_tool_results(session, is_final=True)
-        
-        # Return the original response if it was a direct LLM response with no tool usage
-        return full_response
+            _full_response, _message_tool_calls, _tool_results = await self._handle_tool_calling_chain(session, 
+                                                         _full_response,
+                                                         _message_tool_calls,
+                                                         _tool_results)
 
-    async def _stream_llm_response(self, session: aiohttp.ClientSession, payload: Dict[str, Any], 
-                             print_output: bool = True) -> Tuple[str, List[Dict[str, Any]], List[Dict[str, Any]]]:
-        """Stream the LLM response and process any tool calls.
+        # Return the original response if it was a direct LLM response with no tool usage
+        return _full_response, _message_tool_calls, _tool_results
+
+    async def _stream_response_from_api(self, session, payload, print_output=True, prefix=None, update_history=True):
+        """Stream a response from the API and handle common processing.
         
         Args:
-            session (aiohttp.ClientSession): The http session to use for the request.
-            payload (Dict[str, Any]): The request payload with messages and tools.
-            print_output (bool): Whether to print the response to the console.
+            session: The aiohttp client session to use.
+            payload: The request payload to send to the API.
+            print_output: Whether to print the output to the console, if there are no tool calls.
+            prefix: Optional prefix to print before the response.
+            update_history: Whether to update message history with the response.
             
         Returns:
-            Tuple[str, List[Dict[str, Any]], List[Dict[str, Any]]]: The response text, tool results, and tool calls.
+            tuple: (full_response, message_tool_calls, tool_results).
         """
-        full_response, message_tool_calls, tool_results = await self._stream_response_from_api(
-            session, payload, print_output=print_output
-        )
+        full_response = ""
+        message_tool_calls = []
+        tool_results = []
         
-        # Update message history with the response and tool calls
-        self._update_message_history(full_response, message_tool_calls, tool_results)
+        if prefix and print_output:
+            print(prefix)
+            
+        async with session.post(f"{self.settings.ollama_api_url}/chat", json=payload) as response:
+            if response.status != 200:
+                error_text = await response.text()
+                self.debug_log.error(f"Error: {response.status}, {error_text}")
+                raise Exception(f"Error: {response.status}, {error_text}")
+            
+            async for line in response.content.iter_any():
+                if not line:
+                    continue
+                
+                try:
+                    line_text = line.decode('utf-8').strip()
+                    if not line_text:
+                        continue
+                    
+                    # Debug log the raw response
+                    self.debug_log.debug(f"Raw response: {line_text}")
+                    
+                    # Parse the JSON response
+                    data = json.loads(line_text)
+                    
+                    # Process the response data
+                    content, current_tool_results = await self._process_response_data(data, message_tool_calls)
+                    if current_tool_results:
+                        tool_results.extend(current_tool_results)
+                    elif content:
+                        if print_output:
+                            print(content, end="", flush=True)
+                        full_response += content
+                    
+                    # Check if this is the last message
+                    if data.get("done", False):
+                        if print_output:
+                            print()  # Add a newline after completion
+                        break
+                    
+                except json.JSONDecodeError as e:
+                    self.debug_log.error(f"Invalid JSON: {e}")
+                except Exception as e:
+                    self.debug_log.error(f"Error processing response: {e}")
         
-        return full_response, tool_results, message_tool_calls
+        # Update message history if requested
+        if update_history:
+            self._update_message_history(full_response, message_tool_calls, tool_results)
+        
+        return full_response, message_tool_calls, tool_results
 
     async def _format_response_with_tool_results(self, session: aiohttp.ClientSession,
                                           tool_results: List[Dict[str, Any]] = None,
@@ -542,9 +584,6 @@ class ChatSession:
         try:
             response_type = "final" if is_final else "partial"
             self.debug_log.info(f"Generating {response_type} response for tool operations")
-            
-            # Save original messages
-            original_messages = self.messages.copy()
             
             # Build the prompt based on whether it's a final or partial response
             prompt = f"I used tools in reaction to: `{self.root_tool_query}`."
@@ -603,7 +642,7 @@ class ChatSession:
             # Get the formatted response using our shared helper
             prefix = f"\n{response_type.capitalize()} response based on tool results:"
             full_response, _, _ = await self._stream_response_from_api(
-                session, payload, print_output=True, prefix=prefix
+                session, payload, print_output=True, prefix=prefix, update_history=True
             )
             
             # Add the formatted response as an assistant message
@@ -616,68 +655,6 @@ class ChatSession:
             response_type = "final" if is_final else "partial"
             self.debug_log.error(f"Error formatting {response_type} response: {e}")
             return f"Error formatting the response after tool operations."
-
-    async def _stream_response_from_api(self, session, payload, print_output=True, prefix=None):
-        """Stream a response from the API and handle common processing.
-        
-        Args:
-            session: The aiohttp client session to use
-            payload: The request payload to send to the API
-            print_output: Whether to print the output to the console
-            prefix: Optional prefix to print before the response
-            
-        Returns:
-            tuple: (full_response, message_tool_calls, tool_results)
-        """
-        full_response = ""
-        message_tool_calls = []
-        tool_results = []
-        
-        if prefix and print_output:
-            print(prefix)
-            
-        async with session.post(f"{self.settings.ollama_api_url}/chat", json=payload) as response:
-            if response.status != 200:
-                error_text = await response.text()
-                self.debug_log.error(f"Error: {response.status}, {error_text}")
-                raise Exception(f"Error: {response.status}, {error_text}")
-            
-            async for line in response.content.iter_any():
-                if not line:
-                    continue
-                
-                try:
-                    line_text = line.decode('utf-8').strip()
-                    if not line_text:
-                        continue
-                    
-                    # Debug log the raw response
-                    self.debug_log.debug(f"Raw response: {line_text}")
-                    
-                    # Parse the JSON response
-                    data = json.loads(line_text)
-                    
-                    # Process the response data
-                    content, current_tool_results = await self._process_response_data(data, message_tool_calls)
-                    if content:
-                        if print_output:
-                            print(content, end="", flush=True)
-                        full_response += content
-                    if current_tool_results:
-                        tool_results.extend(current_tool_results)
-                    
-                    # Check if this is the last message
-                    if data.get("done", False):
-                        if print_output:
-                            print()  # Add a newline after completion
-                        break
-                    
-                except json.JSONDecodeError as e:
-                    self.debug_log.error(f"Invalid JSON: {e}")
-                except Exception as e:
-                    self.debug_log.error(f"Error processing response: {e}")
-        
-        return full_response, message_tool_calls, tool_results
 
 # Update the interactive_chat function to use ChatCommandHandler
 async def interactive_chat(settings: ChatSettings, debug_log: SessionDebugLog = None) -> None:
