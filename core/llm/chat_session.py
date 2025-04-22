@@ -345,41 +345,17 @@ class ChatSession:
             # Add this as a new message
             self.messages.append(format_request)
             
-            # Use the existing prepare_request_payload method
             payload = self._prepare_request_payload()
             
-            # Use streaming for this request too
-            formatted_response = ""
-            print("\nFormatted response based on tool results:")
-            
-            async with session.post(f"{self.settings.ollama_api_url}/chat", json=payload) as response:
-                if response.status != 200:
-                    self.debug_log.error("Failed to get formatted response")
-                    return None
-                
-                async for line in response.content.iter_any():
-                    if not line:
-                        continue
-                        
-                    try:
-                        line_text = line.decode('utf-8').strip()
-                        if not line_text:
-                            continue
-                        
-                        data = json.loads(line_text)
-                        
-                        if "message" in data and "content" in data["message"]:
-                            content = data["message"]["content"]
-                            print(content, end="", flush=True)
-                            formatted_response += content
-                            
-                        # Check if this is the last message
-                        if data.get("done", False):
-                            print()  # Add a newline after completion
-                            break
-                            
-                    except Exception as e:
-                        self.debug_log.error(f"Error processing formatted response: {e}")
+            # Use our shared streaming method with a custom prefix
+            formatted_response, _, _ = await self._stream_response_from_api(
+                session,
+                payload,
+                print_output=True,
+                prefix="\nFormatted response based on tool results:",
+                # We'll handle updating history later with the original_messages
+                update_history=False
+            )
             
             # Restore original state
             self.messages = original_messages
