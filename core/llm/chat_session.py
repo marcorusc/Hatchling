@@ -312,18 +312,6 @@ class ChatSession:
             for tool_result in tool_results:
                 self.messages.append(tool_result)
     
-    def _should_format_with_tool_results(self, full_response: str) -> bool:
-        """Determine if we should send tool results back to the LLM for formatting.
-        
-        Args:
-            full_response (str): The complete response from the LLM.
-            
-        Returns:
-            bool: True if we should format with tool results, False otherwise.
-        """
-        # If the response is empty or just whitespace, or doesn't contain a helpful response
-        return not full_response.strip() or "I'll use a tool" in full_response
-    
     async def _get_formatted_response_with_tool_results(self, session: aiohttp.ClientSession,  
                                                       tool_results: List[Dict[str, Any]]) -> Optional[str]:
         """Send a follow-up request to the LLM to format the tool results.
