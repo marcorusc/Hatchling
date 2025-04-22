@@ -729,7 +729,7 @@ async def main(settings: ChatSettings) -> None:
     debug_log.info(message)
     
     # Check if MCP server is available using MCPManager
-    debug_log.info("\nChecking MCP server availability...")
+    debug_log.info("Checking MCP server availability...")
     mcp_available = await mcp_manager.initialize(settings.mcp_server_urls)
     
     if mcp_available:
@@ -740,7 +740,7 @@ async def main(settings: ChatSettings) -> None:
     else:
         debug_log.warning("MCP server is not available. You can start the MCP server by running:")
         debug_log.warning("python mcp_server_test.py")
-        debug_log.warning("\nContinuing without MCP tools...")
+        debug_log.warning("Continuing without MCP tools...")
     
     async with aiohttp.ClientSession() as session:
         try:
