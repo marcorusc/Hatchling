@@ -13,17 +13,20 @@ from core.logging.logging_manager import logging_manager
 from config.settings import ChatSettings
 from core.llm.model_manager import ModelManager
 from core.chat.chat_command_handler import ChatCommandHandler
+# Import the new MessageHistory class
+from core.chat.message_history import MessageHistory
 
 class ChatSession:
     def __init__(self, settings: ChatSettings):
         """Initialize a chat session with the specified settings."""
         self.settings = settings
         self.model_name = settings.default_model
-        self.messages: List[Dict[str, str]] = []
-        # is_streaming property removed as everything will be streaming
         # Get session-specific logger from the manager
         self.debug_log = logging_manager.get_session(f"ChatSession-{self.model_name}",
                                   formatter=logging.Formatter('%(asctime)s - %(name)s - %(levellevel)s - %(message)s'))
+        
+        # Initialize message history
+        self.history = MessageHistory(self.debug_log)
         
         # MCP-related property
         self.tools_enabled = False
@@ -52,22 +55,6 @@ class ChatSession:
             
         return self.tools_enabled
     
-    def add_user_message(self, content: str) -> None:
-        """Add a user message to the chat history.
-        
-        Args:
-            content (str): The message content.
-        """
-        self.messages.append({"role": "user", "content": content})
-    
-    def add_assistant_message(self, content: str) -> None:
-        """Add an assistant message to the chat history.
-        
-        Args:
-            content (str): The message content.
-        """
-        self.messages.append({"role": "assistant", "content": content})
-    
     async def send_message(self, user_message: str, session: aiohttp.ClientSession) -> str:
         """Send the current message history to the Ollama API and stream the response.
         
@@ -79,7 +66,7 @@ class ChatSession:
             str: The assistant's response.
         """
         # Add user message
-        self.add_user_message(user_message)
+        self.history.add_user_message(user_message)
         
         # Reset tool calling counters for a new user message
         self.current_tool_call_iteration = 0
@@ -119,7 +106,7 @@ class ChatSession:
         """
         payload = {
             "model": self.model_name,
-            "messages": self.messages,
+            "messages": self.history.get_messages(),
             "stream": True  # Always stream
         }
         self.debug_log.debug(f"Prepared payload: {json.dumps(payload)}")
@@ -280,38 +267,6 @@ class ChatSession:
         
         return None
     
-    def _update_message_history(self, full_response: str, message_tool_calls: List[Dict[str, Any]], 
-                                     tool_results: List[Dict[str, Any]]) -> None:
-        """Update the message history with the response and tool results.
-        
-        Args:
-            full_response (str): The complete response from the LLM.
-            message_tool_calls (List[Dict[str, Any]]): List of tool calls from the response.
-            tool_results (List[Dict[str, Any]]): List of tool execution results.
-        """
-        # Only update if we got a response or tool results
-        if not full_response.strip() and not tool_results:
-            return
-            
-        # First add the assistant message
-        self.add_assistant_message(full_response)
-        
-        # If we had tool calls, update the last message to include them
-        if message_tool_calls:
-            assistant_message_with_tool_calls = {
-                "role": "assistant", 
-                "content": full_response,
-                "tool_calls": message_tool_calls
-            }
-            
-            # Replace the last added message with this one containing tool calls
-            if self.messages and self.messages[-1]["role"] == "assistant":
-                self.messages[-1] = assistant_message_with_tool_calls
-            
-            # Add all tool results to the message history
-            for tool_result in tool_results:
-                self.messages.append(tool_result)
-    
     async def _get_formatted_response_with_tool_results(self, session: aiohttp.ClientSession,  
                                                       tool_results: List[Dict[str, Any]]) -> Optional[str]:
         """Send a follow-up request to the LLM to format the tool results.
@@ -326,15 +281,11 @@ class ChatSession:
         try:
             self.debug_log.info("Sending follow-up request to format tool results")
             
-            # Keep a copy of the current messages to restore later
-            original_messages = self.messages.copy()
+            # Keep a copy of the current messages
+            original_history = self.history.copy()
             
-            # Get the original user query (should be the last user message)
-            user_query = "Unknown request"
-            for msg in reversed(self.messages):
-                if msg["role"] == "user":
-                    user_query = msg["content"]
-                    break
+            # Get the original user query
+            user_query = self.history.get_last_user_message() or "Unknown request"
             
             # Create a new message to ask the LLM to format the results
             format_request = {
@@ -343,7 +294,7 @@ class ChatSession:
             }
 
             # Add this as a new message
-            self.messages.append(format_request)
+            self.history.messages.append(format_request)
             
             payload = self._prepare_request_payload()
             
@@ -358,10 +309,10 @@ class ChatSession:
             )
             
             # Restore original state
-            self.messages = original_messages
+            self.history = original_history
             
             # Add the formatted response as an assistant message
-            self.add_assistant_message(formatted_response)
+            self.history.add_assistant_message(formatted_response)
             
             return formatted_response
             
@@ -440,10 +391,7 @@ class ChatSession:
             # Continue with sequential tool calling - prepare new payload with updated messages
             #Write a prompt asking the LLM whether the tool results are enough to answer the question
             self.debug_log.info("Preparing next payload for sequential tool calling")
-            self.messages.append({
-                "role": "user",
-                "content": f"Given the tool results: {tool_results}, do you have enough information to answer the original query: `{self.root_tool_query}`? If not, please ask for more information or continue using tools."
-            })
+            self.history.add_user_message(f"Given the tool results: {tool_results}, do you have enough information to answer the original query: `{self.root_tool_query}`? If not, please ask for more information or continue using tools.")
             
             # Prepare the next payload
             next_payload = self._prepare_request_payload()
@@ -526,7 +474,7 @@ class ChatSession:
         
         # Update message history if requested
         if update_history:
-            self._update_message_history(full_response, message_tool_calls, tool_results)
+            self.history.update_message_history(full_response, message_tool_calls, tool_results)
         
         return full_response, message_tool_calls, tool_results
 
@@ -578,28 +526,19 @@ class ChatSession:
                 prompt += "Please provide a comprehensive final answer to the original question based on all the tool operations."
                 prompt += " Use clear formatting and explanations."
             
-            # Create the formatting request with string content only
-            format_request = {
-                "role": "user",
-                "content": prompt
-            }
-            
             # Create a clean message history with just what we need for formatting
-            clean_messages = []
+            clean_history = MessageHistory(self.debug_log)
             
             # Include the root query for context
-            clean_messages.append({
-                "role": "user",
-                "content": self.root_tool_query
-            })
+            clean_history.add_user_message(self.root_tool_query)
             
             # Add the formatting request
-            clean_messages.append(format_request)
+            clean_history.add_user_message(prompt)
             
             # Create a new payload without tools (we don't want more tool calls in the formatted response)
             payload = {
                 "model": self.model_name,
-                "messages": clean_messages,
+                "messages": clean_history.get_messages(),
                 "stream": True
             }
             
@@ -611,7 +550,7 @@ class ChatSession:
             
             # Add the formatted response as an assistant message
             if full_response:
-                self.add_assistant_message(full_response)
+                self.history.add_assistant_message(full_response)
             
             return full_response
         
