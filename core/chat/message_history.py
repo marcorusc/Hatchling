@@ -8,7 +8,7 @@ class MessageHistory:
         """Initialize an empty message history.
         
         Args:
-            debug_log: Optional logger for debug information
+            debug_log (Optional[SessionDebugLog]): Optional logger for debug information.
         """
         self.messages: List[Dict[str, Any]] = []
         self.debug_log = debug_log
@@ -17,7 +17,7 @@ class MessageHistory:
         """Add a user message to the history.
         
         Args:
-            content: The message content
+            content (str): The message content.
         """
         self.messages.append({"role": "user", "content": content})
         if self.debug_log:
@@ -27,8 +27,8 @@ class MessageHistory:
         """Add an assistant message to the history.
         
         Args:
-            content: The message content
-            tool_calls: Optional list of tool calls
+            content (str): The message content.
+            tool_calls (List[Dict[str, Any]], optional): Optional list of tool calls.
         """
         if not tool_calls:
             self.messages.append({"role": "assistant", "content": content})
@@ -46,9 +46,9 @@ class MessageHistory:
         """Add a tool result to the history.
         
         Args:
-            tool_call_id: ID of the tool call this result is for
-            function_name: Name of the function that was called
-            content: The tool result content
+            tool_call_id (str): ID of the tool call this result is for.
+            function_name (str): Name of the function that was called.
+            content (str): The tool result content.
         """
         self.messages.append({
             "role": "tool",
@@ -65,9 +65,9 @@ class MessageHistory:
         """Update the message history with the response and tool results.
         
         Args:
-            full_response: The complete response from the LLM
-            message_tool_calls: List of tool calls from the response
-            tool_results: List of tool execution results
+            full_response (str): The complete response from the LLM.
+            message_tool_calls (List[Dict[str, Any]]): List of tool calls from the response.
+            tool_results (List[Dict[str, Any]]): List of tool execution results.
         """
         # Only update if we got a response or tool results
         if not full_response.strip() and not tool_results:
@@ -91,7 +91,7 @@ class MessageHistory:
         """Get all messages.
         
         Returns:
-            List of message dictionaries
+            List[Dict[str, Any]]: List of message dictionaries.
         """
         return self.messages
     
@@ -99,7 +99,7 @@ class MessageHistory:
         """Get the content of the last user message.
         
         Returns:
-            Content of the last user message, or None if not found
+            Optional[str]: Content of the last user message, or None if not found.
         """
         for message in reversed(self.messages):
             if message["role"] == "user":
@@ -110,8 +110,8 @@ class MessageHistory:
         """Replace the last assistant message.
         
         Args:
-            content: The new content
-            tool_calls: Optional tool calls to include
+            content (str): The new content.
+            tool_calls (List[Dict[str, Any]], optional): Optional tool calls to include.
         """
         for i in range(len(self.messages) - 1, -1, -1):
             if self.messages[i]["role"] == "assistant":
@@ -129,7 +129,7 @@ class MessageHistory:
         """Create a copy of this message history.
         
         Returns:
-            A new MessageHistory with the same messages
+            MessageHistory: A new MessageHistory with the same messages.
         """
         new_history = MessageHistory(self.debug_log)
         new_history.messages = self.messages.copy()
@@ -142,5 +142,9 @@ class MessageHistory:
             self.debug_log.debug("Message history cleared")
     
     def __len__(self) -> int:
-        """Get the number of messages."""
+        """Get the number of messages.
+        
+        Returns:
+            int: The number of messages in the history.
+        """
         return len(self.messages)

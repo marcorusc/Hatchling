@@ -11,12 +11,16 @@ from core.llm.api_manager import APIManager
 
 class ChatSession:
     def __init__(self, settings: ChatSettings):
-        """Initialize a chat session with the specified settings."""
+        """Initialize a chat session with the specified settings.
+        
+        Args:
+            settings (ChatSettings): Configuration settings for the chat session.
+        """
         self.settings = settings
         self.model_name = settings.default_model
         # Get session-specific logger from the manager
         self.debug_log = logging_manager.get_session(f"ChatSession-{self.model_name}",
-                                  formatter=logging.Formatter('%(asctime)s - %(name)s - %(levellevel)s - %(message)s'))
+                                  formatter=logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
         
         # Initialize message components
         self.history = MessageHistory(self.debug_log)

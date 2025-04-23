@@ -3,8 +3,12 @@ from setuptools import setup, find_packages
 # Import version from dedicated version file
 import os
 
-# Read version from a file or environment
-def get_version():
+def get_version() -> str:
+    """Get the package version from the VERSION file or fallback to a default.
+    
+    Returns:
+        str: The package version.
+    """
     # Option 1: Read from a VERSION file
     if os.path.exists('VERSION'):
         with open('VERSION', 'r') as f:

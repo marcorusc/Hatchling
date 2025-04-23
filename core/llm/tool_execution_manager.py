@@ -14,7 +14,7 @@ class ToolExecutionManager:
         """Initialize the tool execution manager.
         
         Args:
-            settings: The application settings
+            settings (ChatSettings): The application settings.
         """
         self.settings = settings
         self.debug_log = logging_manager.get_session(f"ToolExecutionManager-{settings.default_model}",
@@ -30,10 +30,10 @@ class ToolExecutionManager:
         """Initialize connection to MCP servers.
         
         Args:
-            server_paths: List of paths to MCP server scripts.
+            server_paths (List[str]): List of paths to MCP server scripts.
             
         Returns:
-            True if connection was successful, False otherwise.
+            bool: True if connection was successful, False otherwise.
         """
         # Use MCPManager to initialize everything
         self.tools_enabled = await mcp_manager.initialize(server_paths)
@@ -49,7 +49,7 @@ class ToolExecutionManager:
         """Get the list of tools to include in the LLM API payload.
         
         Returns:
-            List of tool definitions for the API payload
+            List[Dict[str, Any]]: List of tool definitions for the API payload.
         """
         return mcp_manager.get_ollama_tools()
 
@@ -57,7 +57,7 @@ class ToolExecutionManager:
         """Reset tool execution state for a new user query.
         
         Args:
-            query: The user's query that's starting a new conversation
+            query (str): The user's query that's starting a new conversation.
         """
         self.current_tool_call_iteration = 0
         self.tool_call_start_time = time.time()
@@ -67,12 +67,12 @@ class ToolExecutionManager:
         """Execute a tool and return its result.
         
         Args:
-            tool_id: The ID of the tool.
-            function_name: The name of the function to execute.
-            arguments: The arguments to pass to the function.
+            tool_id (str): The ID of the tool.
+            function_name (str): The name of the function to execute.
+            arguments (Dict[str, Any]): The arguments to pass to the function.
             
         Returns:
-            The tool result, or None if execution failed.
+            Optional[Dict[str, Any]]: The tool result, or None if execution failed.
         """
         try:
             # Increment the tool call iteration counter each time a tool is executed
@@ -123,11 +123,11 @@ class ToolExecutionManager:
         """Process a single tool call and return the result.
         
         Args:
-            tool_call: The tool call to process.
-            tool_id: The ID of the tool call.
+            tool_call (Dict[str, Any]): The tool call to process.
+            tool_id (str): The ID of the tool call.
             
         Returns:
-            The tool result, or None if processing failed.
+            Optional[Dict[str, Any]]: The tool result, or None if processing failed.
         """
         function_name = tool_call["function"]["name"]
         arguments = tool_call["function"]["arguments"]
@@ -152,11 +152,11 @@ class ToolExecutionManager:
         """Process tool calls from streaming response data.
         
         Args:
-            data: The response data from the LLM.
-            message_tool_calls: List of processed tool calls.
+            data (Dict[str, Any]): The response data from the LLM.
+            message_tool_calls (List[Dict[str, Any]]): List of processed tool calls.
             
         Returns:
-            List of tool results.
+            List[Dict[str, Any]]: List of tool results.
         """
         tool_results = []
         current_tool_calls = data["message"]["tool_calls"]
@@ -191,14 +191,15 @@ class ToolExecutionManager:
         
         Args:
             session: The http session to use for API requests.
-            api_manager: The API manager for making API calls
-            history: The message history
-            full_response: The latest response from the LLM.
-            message_tool_calls: List of tool calls from the response.
-            tool_results: List of tool execution results.
+            api_manager: The API manager for making API calls.
+            history: The message history.
+            full_response (str): The latest response from the LLM.
+            message_tool_calls (List[Dict[str, Any]]): List of tool calls from the response.
+            tool_results (List[Dict[str, Any]]): List of tool execution results.
                         
         Returns:
-            Tuple containing (full_response, message_tool_calls, tool_results).
+            Tuple[str, List[Dict[str, Any]], List[Dict[str, Any]]]: Tuple containing 
+            (full_response, message_tool_calls, tool_results).
         """
         _full_response, _message_tool_calls, _tool_results = full_response, message_tool_calls, tool_results
         

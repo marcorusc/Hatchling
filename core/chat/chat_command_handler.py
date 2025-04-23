@@ -14,9 +14,9 @@ class ChatCommandHandler:
         """Initialize the command handler.
         
         Args:
-            chat_session: The chat session this handler is associated with
-            settings (ChatSettings): The chat settings to use
-            debug_log (SessionDebugLog): Logger for command operations
+            chat_session: The chat session this handler is associated with.
+            settings (ChatSettings): The chat settings to use.
+            debug_log (SessionDebugLog): Logger for command operations.
         """
         self.chat_session = chat_session
         self.settings = settings
@@ -67,7 +67,7 @@ class ChatCommandHandler:
         """Process a potential command from user input.
         
         Args:
-            user_input (str): The user's input text
+            user_input (str): The user's input text.
             
         Returns:
             Tuple[bool, bool]: (is_command, should_continue)
@@ -100,10 +100,10 @@ class ChatCommandHandler:
         """Display help information.
         
         Args:
-            _ (str): Unused arguments
+            _ (str): Unused arguments.
             
         Returns:
-            bool: True to continue the chat session
+            bool: True to continue the chat session.
         """
         self.print_commands_help()
         return True
@@ -112,10 +112,10 @@ class ChatCommandHandler:
         """Exit the chat session.
         
         Args:
-            _ (str): Unused arguments
+            _ (str): Unused arguments.
             
         Returns:
-            bool: False to end the chat session
+            bool: False to end the chat session.
         """
         print("Ending chat session...")
         return False
@@ -124,10 +124,10 @@ class ChatCommandHandler:
         """Clear chat history.
         
         Args:
-            _ (str): Unused arguments
+            _ (str): Unused arguments.
             
         Returns:
-            bool: True to continue the chat session
+            bool: True to continue the chat session.
         """
         self.chat_session.history.clear()
         print("Chat history cleared!")
@@ -137,10 +137,10 @@ class ChatCommandHandler:
         """Display session logs.
         
         Args:
-            args (str): Optional number of log entries to show
+            args (str): Optional number of log entries to show.
             
         Returns:
-            bool: True to continue the chat session
+            bool: True to continue the chat session.
         """
         try:
             logs_to_show = int(args) if args.strip() else None
@@ -154,10 +154,10 @@ class ChatCommandHandler:
         """Set the log level.
         
         Args:
-            args (str): Log level name (debug, info, warning, error, critical)
+            args (str): Log level name (debug, info, warning, error, critical).
             
         Returns:
-            bool: True to continue the chat session
+            bool: True to continue the chat session.
         """
         level_name = args.strip().lower()
         level_map = {
@@ -182,10 +182,10 @@ class ChatCommandHandler:
         """Enable MCP tools.
         
         Args:
-            _ (str): Unused arguments
+            _ (str): Unused arguments.
             
         Returns:
-            bool: True to continue the chat session
+            bool: True to continue the chat session.
         """
         connected = await self.chat_session.initialize_mcp(self.settings.mcp_server_urls)
         if not connected:
@@ -199,10 +199,10 @@ class ChatCommandHandler:
         """Disable MCP tools.
         
         Args:
-            _ (str): Unused arguments
+            _ (str): Unused arguments.
             
         Returns:
-            bool: True to continue the chat session
+            bool: True to continue the chat session.
         """
         if self.chat_session.tool_executor.tools_enabled:
             await mcp_manager.disconnect_all()
@@ -218,10 +218,10 @@ class ChatCommandHandler:
         """Set maximum tool call iterations.
         
         Args:
-            args (str): Number of iterations
+            args (str): Number of iterations.
             
         Returns:
-            bool: True to continue the chat session
+            bool: True to continue the chat session.
         """
         try:
             iterations = int(args.strip())
@@ -241,10 +241,10 @@ class ChatCommandHandler:
         """Set maximum working time for tool operations.
         
         Args:
-            args (str): Time in seconds
+            args (str): Time in seconds.
             
         Returns:
-            bool: True to continue the chat session
+            bool: True to continue the chat session.
         """
         try:
             seconds = float(args.strip())

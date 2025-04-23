@@ -17,8 +17,8 @@ class CLIChat:
         """Initialize the CLI chat interface.
         
         Args:
-            settings (ChatSettings): The chat settings to use
-            debug_log (SessionDebugLog, optional): Logger for debugging
+            settings (ChatSettings): The chat settings to use.
+            debug_log (Optional[SessionDebugLog]): Logger for debugging information. Defaults to None.
         """
         self.settings = settings
         
@@ -37,7 +37,7 @@ class CLIChat:
         """Initialize the chat environment.
         
         Returns:
-            bool: True if initialization was successful
+            bool: True if initialization was successful.
         """
         # Check if Ollama service is available
         available, message = await self.model_manager.check_ollama_service()
@@ -74,10 +74,10 @@ class CLIChat:
         """Check if the model is available and pull it if necessary.
         
         Args:
-            session (aiohttp.ClientSession): The session to use for API calls
+            session (aiohttp.ClientSession): The session to use for API calls.
             
         Returns:
-            bool: True if model is available (either already or after pulling)
+            bool: True if model is available (either already or after pulling).
         """
         try:
             # Check if model is available
