@@ -92,7 +92,7 @@ class ChatSession:
                                                         message_tool_calls,
                                                         tool_results)
         
-            full_response = await self._format_response_with_tool_results(session, tool_results)
+            full_response = await self._format_response_with_tool_results(session, message_tool_calls, tool_results)
 
         return full_response
     
@@ -314,44 +314,41 @@ class ChatSession:
 
         _full_response, _message_tool_calls, _tool_results = full_response, message_tool_calls, tool_results
         
-        # If we have tool results, we need to decide what to do next
-        if tool_results:
-            elapsed_time = time.time() - self.tool_call_start_time
-            
-            # Check if we've hit limits
-            reached_max_iterations = self.current_tool_call_iteration >= self.settings.max_tool_call_iteration
-            reached_time_limit = elapsed_time >= self.settings.max_working_time
-            
-            if reached_max_iterations or reached_time_limit:
-                # We've reached a limit, generate a partial response
-                limit_reason = "maximum iterations" if reached_max_iterations else "time limit"
-                self.debug_log.warning(f"Reached {limit_reason} for tool calling ({self.current_tool_call_iteration} iterations, {elapsed_time:.1f}s)")
-                return await self._format_response_with_tool_results(
-                    session,
-                    tool_results=tool_results,
-                    is_final=False,
-                    limit_reason=limit_reason
-                ), [], []
-            
-            # Continue with sequential tool calling - prepare new payload with updated messages
-            #Write a prompt asking the LLM whether the tool results are enough to answer the question
-            self.debug_log.info("Preparing next payload for sequential tool calling")
-            self.history.add_user_message(f"Given the tool results: {tool_results}, do you have enough information to answer the original query: `{self.root_tool_query}`? If not, please ask for more information or continue using tools.")
-            
-            # Prepare the next payload
-            next_payload = self._prepare_request_payload()
-            next_payload = self._add_tools_to_payload(next_payload)
-            
-            _full_response, _message_tool_calls, _tool_results = await self._stream_response_from_api(
-                 session, next_payload, print_output=False, update_history=True
-             )
+        elapsed_time = time.time() - self.tool_call_start_time
+        
+        # Check if we've hit limits
+        reached_max_iterations = self.current_tool_call_iteration >= self.settings.max_tool_call_iteration
+        reached_time_limit = elapsed_time >= self.settings.max_working_time
+        
+        if reached_max_iterations or reached_time_limit:
+            # We've reached a limit, generate a partial response
+            limit_reason = "maximum iterations" if reached_max_iterations else "time limit"
+            self.debug_log.warning(f"Reached {limit_reason} for tool calling ({self.current_tool_call_iteration} iterations, {elapsed_time:.1f}s)")
+            return _full_response, _message_tool_calls, _tool_results
+        
+        # Continue with sequential tool calling - prepare new payload with updated messages
+        #Write a prompt asking the LLM whether the tool results are enough to answer the question
+        prompt = f"Given the tool results: {tool_results}, do you have enough information to answer the original query: `{self.root_tool_query}`? If not, please ask for more information or continue using tools."
+        
+        self.debug_log.debug("Asking LLM if it has enough information to answer the original query:\n" + prompt)
+        
+        # Prepare the next payload
+        next_payload = self._prepare_request_payload()
+        next_payload = self._add_tools_to_payload(next_payload)
+        
+        __full_response, __message_tool_calls, __tool_results = await self._stream_response_from_api(
+                session, next_payload, print_output=False, update_history=True
+            )
+        
+        self.debug_log.debug(f"LLM response to tool results to whether it has enough information: {__full_response}")
 
-            # Process the next step (recursive call)
+        # Process the next step (recursive call)
+        if __tool_results:
             self.debug_log.info(f"Continuing with tool calling iteration {self.current_tool_call_iteration}/{self.settings.max_tool_call_iteration} ({elapsed_time:.1f}s elapsed)")
             _full_response, _message_tool_calls, _tool_results = await self._handle_tool_calling_chain(session, 
-                                                         _full_response,
-                                                         _message_tool_calls,
-                                                         _tool_results)
+                                                        __full_response,
+                                                        _message_tool_calls+__message_tool_calls,
+                                                        _tool_results+__tool_results)
 
         # Return the original response if it was a direct LLM response with no tool usage
         return _full_response, _message_tool_calls, _tool_results
@@ -424,13 +421,15 @@ class ChatSession:
         return full_response, message_tool_calls, tool_results
     
     async def _format_response_with_tool_results(self, session: aiohttp.ClientSession,
-                                          tool_results: List[Dict[str, Any]] = None,
-                                          is_final: bool = True,
-                                          limit_reason: str = None) -> str:
+                                        message_tool_calls: List[Dict[str, Any]] = None,  
+                                        tool_results: List[Dict[str, Any]] = None,
+                                        is_final: bool = True,
+                                        limit_reason: str = None) -> str:
         """Format a response based on tool results.
         
         Args:
             session (aiohttp.ClientSession): The http session to use for the request.
+            message_tool_calls (List[Dict[str, Any]], optional): The tool calls to format.
             tool_results (List[Dict[str, Any]], optional): The tool results to format.
             is_final (bool): Whether this is the final response (True) or partial (False).
             limit_reason (str, optional): If partial, the reason for stopping (max iterations or time limit).
@@ -445,6 +444,8 @@ class ChatSession:
             # Build the prompt based on whether it's a final or partial response
             prompt = f"I used tools in reaction to: `{self.root_tool_query}`."
             prompt += "\n"
+            prompt += f"Here are the tool calls: {message_tool_calls}."
+            prompt += "\n"
             prompt += f"Here are the tool results: {tool_results}."
             prompt += "\n\n"
             
@@ -458,7 +459,9 @@ class ChatSession:
             prompt += "\n\n"
             prompt += "Adapt the the level of complexity and information in your answer to the the individual tool result."
             prompt += " Simple tool result leads to simple answer, while complex tool result lead to more details in the final answer."
-            
+
+            self.debug_log.debug(f"Prompt for formatting:\n{prompt}")
+
             # Create a clean message history with just what we need for formatting
             clean_history = MessageHistory(self.debug_log)
             
