@@ -5,7 +5,7 @@ import os
 import argparse
 from core.logging.logging_manager import logging_manager
 from config.settings import ChatSettings
-import core.llm.chat_session as chat_session
+from ui.cli_chat import CLIChat
 from mcp_utils.manager import mcp_manager
 
 # Get logger with custom formatter - this takes advantage of our new implementation
@@ -43,13 +43,14 @@ async def main():
                 log.error(f"Failed to start MCP server: {mcp_server_path}")
                 return
         
-        # Update MCP server path in chat_session.py
+        # Create settings with MCP server path
         settings = ChatSettings(default_model=args.model, mcp_server_urls=[mcp_server_path])
         
         log.info(f"Using MCP server script: {mcp_server_path}")
         
-        # Run the chat_session main function
-        await chat_session.main(settings)
+        # Create and run CLI chat interface
+        cli_chat = CLIChat(settings, log)
+        await cli_chat.initialize_and_run()
         
     except KeyboardInterrupt:
         log.info("Application interrupted by user")
