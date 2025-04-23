@@ -263,7 +263,6 @@ class ChatSession:
                 }
         except Exception as e:
             self.debug_log.error(f"Error executing tool: {e}")
-            print(f"[Error executing tool: {e}]\n")
         
         return None
     
@@ -354,7 +353,7 @@ class ChatSession:
                     full_response: str,
                     message_tool_calls: List[Dict[str, Any]],
                     tool_results: List[Dict[str, Any]]
-                    ) -> str:
+                    ) -> Tuple[str, List[Dict[str, Any]], List[Dict[str, Any]]]:
         """Handle the response from the LLM API and manage tool calling chains.
         
         Args:
@@ -364,7 +363,8 @@ class ChatSession:
             tool_results (List[Dict[str, Any]]): List of tool execution results.
                         
         Returns:
-            str: The final response after all tool calls.
+            Tuple[str, List[Dict[str, Any]], List[Dict[str, Any]]]: Tuple containing
+            (full_response, message_tool_calls, tool_results).
         """
 
         _full_response, _message_tool_calls, _tool_results = full_response, message_tool_calls, tool_results
@@ -386,7 +386,7 @@ class ChatSession:
                     tool_results=tool_results,
                     is_final=False,
                     limit_reason=limit_reason
-                )
+                ), [], []
             
             # Continue with sequential tool calling - prepare new payload with updated messages
             #Write a prompt asking the LLM whether the tool results are enough to answer the question
