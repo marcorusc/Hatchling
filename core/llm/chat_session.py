@@ -92,9 +92,7 @@ class ChatSession:
                                                         message_tool_calls,
                                                         tool_results)
         
-        # If we have tool results, send another message to the LLM with the tool results for formatting
-        #if tool_results:
-            full_response = await self._get_formatted_response_with_tool_results(session, tool_results)
+            full_response = await self._format_response_with_tool_results(session, tool_results)
 
         return full_response
     
@@ -265,59 +263,6 @@ class ChatSession:
             self.debug_log.error(f"Error executing tool: {e}")
         
         return None
-    
-    async def _get_formatted_response_with_tool_results(self, session: aiohttp.ClientSession,  
-                                                      tool_results: List[Dict[str, Any]]) -> Optional[str]:
-        """Send a follow-up request to the LLM to format the tool results.
-        
-        Args:
-            session (aiohttp.ClientSession): The http session to use for the request to the LLM.
-            tool_results (List[Dict[str, Any]]): The tool results to format.
-            
-        Returns:
-            Optional[str]: The formatted response, or None if formatting failed.
-        """
-        try:
-            self.debug_log.info("Sending follow-up request to format tool results")
-            
-            # Keep a copy of the current messages
-            original_history = self.history.copy()
-            
-            # Get the original user query
-            user_query = self.history.get_last_user_message() or "Unknown request"
-            
-            # Create a new message to ask the LLM to format the results
-            format_request = {
-                "role": "user",
-                "content": f"I used tools in reaction to: `{user_query}`. Here are the tool results: {tool_results}. Provide a helpful, well-formatted answer to the original question using these results."
-            }
-
-            # Add this as a new message
-            self.history.messages.append(format_request)
-            
-            payload = self._prepare_request_payload()
-            
-            # Use our shared streaming method with a custom prefix
-            formatted_response, _, _ = await self._stream_response_from_api(
-                session,
-                payload,
-                print_output=True,
-                prefix="\nFormatted response based on tool results:",
-                # We'll handle updating history later with the original_messages
-                update_history=False
-            )
-            
-            # Restore original state
-            self.history = original_history
-            
-            # Add the formatted response as an assistant message
-            self.history.add_assistant_message(formatted_response)
-            
-            return formatted_response
-            
-        except Exception as e:
-            self.debug_log.error(f"Error formatting with tool results: {e}")
-            return None
 
     async def _process_tool_call(self, tool_call: Dict[str, Any], tool_id: str) -> Optional[Dict[str, Any]]:
         """Process a single tool call and return the result.
@@ -477,7 +422,7 @@ class ChatSession:
             self.history.update_message_history(full_response, message_tool_calls, tool_results)
         
         return full_response, message_tool_calls, tool_results
-
+    
     async def _format_response_with_tool_results(self, session: aiohttp.ClientSession,
                                           tool_results: List[Dict[str, Any]] = None,
                                           is_final: bool = True,
@@ -499,32 +444,20 @@ class ChatSession:
             
             # Build the prompt based on whether it's a final or partial response
             prompt = f"I used tools in reaction to: `{self.root_tool_query}`."
+            prompt += "\n"
+            prompt += f"Here are the tool results: {tool_results}."
+            prompt += "\n\n"
             
             if not is_final and limit_reason:
-                prompt += f" However, I reached {limit_reason} ({self.current_tool_call_iteration} iterations).\n\n"
-                if tool_results:
-                    # Convert tool results to a simpler string format to prevent JSON issues
-                    simple_results = []
-                    for result in tool_results:
-                        simple_results.append({
-                            "name": result.get("name", "unknown"),
-                            "content": result.get("content", "No content")
-                        })
-                    prompt += f"Here are the tool results: {simple_results}.\n\n"
-                prompt += "Provide a partial answer based on these results and ask if the user wants to continue processing."
+                prompt += f" However, I reached {limit_reason} ({self.current_tool_call_iteration} iterations)."
+                prompt += "\n"
+                prompt += "Provide a partial answer to the original question based on these partial results and ask if the user wants to continue processing."
             else:  # final response
-                prompt += "\n\n"
-                if tool_results:
-                    # Convert tool results to a simpler string format
-                    simple_results = []
-                    for result in tool_results:
-                        simple_results.append({
-                            "name": result.get("name", "unknown"), 
-                            "content": result.get("content", "No content")
-                        })
-                    prompt += f"Here are the tool results: {simple_results}.\n\n"
-                prompt += "Please provide a comprehensive final answer to the original question based on all the tool operations."
-                prompt += " Use clear formatting and explanations."
+                prompt += "Provide a final answer to the original question based on these complete results."
+            
+            prompt += "\n\n"
+            prompt += "Adapt the the level of complexity and information in your answer to the the individual tool result."
+            prompt += " Simple tool result leads to simple answer, while complex tool result lead to more details in the final answer."
             
             # Create a clean message history with just what we need for formatting
             clean_history = MessageHistory(self.debug_log)
@@ -550,11 +483,11 @@ class ChatSession:
             
             # Add the formatted response as an assistant message
             if full_response:
-                self.history.add_assistant_message(full_response)
-            
-            return full_response
+                self.history.add_assistant_message(full_response)            
         
         except Exception as e:
             response_type = "final" if is_final else "partial"
-            self.debug_log.error(f"Error formatting {response_type} response: {e}")
-            return f"Error formatting the response after tool operations."
+            full_response = f"Error formatting {response_type} response: {e}"
+            self.debug_log.error(full_response)
+
+        return full_response
