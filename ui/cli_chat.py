@@ -117,7 +117,7 @@ class CLIChat:
             while True:
                 try:
                     # Get user input
-                    status = "[Tools enabled]" if self.chat_session.tools_enabled else "[Tools disabled]"
+                    status = "[Tools enabled]" if self.chat_session.tool_executor.tools_enabled else "[Tools disabled]"
                     user_message = input(f"{status} You: ")
                     
                     # Process as command if applicable

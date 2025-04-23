@@ -129,7 +129,7 @@ class ChatCommandHandler:
         Returns:
             bool: True to continue the chat session
         """
-        self.chat_session.messages = []
+        self.chat_session.history.clear()
         print("Chat history cleared!")
         return True
     
@@ -204,11 +204,11 @@ class ChatCommandHandler:
         Returns:
             bool: True to continue the chat session
         """
-        if self.chat_session.tools_enabled:
+        if self.chat_session.tool_executor.tools_enabled:
             await mcp_manager.disconnect_all()
-            self.chat_session.tools_enabled = False
-            # Remove system messages
-            self.chat_session.messages = [msg for msg in self.chat_session.messages if msg.get("role") != "system"]
+            self.chat_session.tool_executor.tools_enabled = False
+            # Clear messages that might have tool-specific content
+            self.chat_session.history.clear()
             print("Tools disabled.")
         else:
             print("Tools were not enabled.")
