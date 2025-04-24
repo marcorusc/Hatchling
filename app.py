@@ -49,7 +49,7 @@ async def main():
         log.info(f"Using MCP server script: {mcp_server_path}")
         
         # Create and run CLI chat interface
-        cli_chat = CLIChat(settings, log)
+        cli_chat = CLIChat(settings)
         await cli_chat.initialize_and_run()
         
     except KeyboardInterrupt:

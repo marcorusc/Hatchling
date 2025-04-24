@@ -20,8 +20,8 @@ class ChatSession:
         
         # Initialize message components
         self.history = MessageHistory(self.debug_log)
-        self.tool_executor = ToolExecutionManager(settings, self.debug_log)
-        self.api_manager = APIManager(settings, self.debug_log)
+        self.tool_executor = ToolExecutionManager(settings)
+        self.api_manager = APIManager(settings)
     
     async def initialize_mcp(self, server_paths: List[str]) -> bool:
         """Initialize connection to MCP servers.
@@ -72,8 +72,6 @@ class ChatSession:
                                                         message_tool_calls,
                                                         tool_results)
         
-        # If we have tool results, send another message to the LLM with the tool results for formatting
-        if tool_results:
             full_response = await self._format_response_with_tool_results(session, message_tool_calls, tool_results, is_final=True)
 
         return full_response
@@ -100,7 +98,7 @@ class ChatSession:
             self.debug_log.info(f"Generating {response_type} response for tool operations")
             
             # Build the prompt based on whether it's a final or partial response
-            prompt = f"I used tools in reaction to: `{self.root_tool_query}`."
+            prompt = f"I used tools in reaction to: `{self.tool_executor.root_tool_query}`."
             prompt += "\n"
             prompt += f"Here are the tool calls: {message_tool_calls}."
             prompt += "\n"
@@ -118,7 +116,7 @@ class ChatSession:
             prompt += "Adapt the the level of complexity and information in your answer to the the individual tool result."
             prompt += " Simple tool result leads to simple answer, while complex tool result lead to more details in the final answer."
                 
-            self.debug_log.debug(f"Prompt for formatting:\n{prompt}")
+            self.debug_log.info(f"Prompt for formatting:\n{prompt}")
             
             # Create a clean message history with just what we need for formatting
             clean_history = MessageHistory(self.debug_log)
@@ -139,7 +137,7 @@ class ChatSession:
             # Get the formatted response using our shared helper
             prefix = f"\n{response_type.capitalize()} response based on tool results:"
             full_response, _, _ = await self.api_manager.stream_response(
-                session, payload, clean_history, print_output=True, prefix=prefix, update_history=True
+                session, payload, clean_history, self.tool_executor, print_output=True, prefix=prefix, update_history=True
             )
             
             # Add the formatted response as an assistant message

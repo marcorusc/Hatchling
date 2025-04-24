@@ -1,23 +1,24 @@
 import json
+import logging
 import time
 from typing import List, Dict, Tuple, Any, Optional
 
 from mcp_utils.manager import mcp_manager
-from core.logging.session_debug_log import SessionDebugLog
+from core.logging.logging_manager import logging_manager
 from config.settings import ChatSettings
 
 class ToolExecutionManager:
     """Manages tool execution and tool calling chains."""
     
-    def __init__(self, settings: ChatSettings, debug_log: SessionDebugLog):
+    def __init__(self, settings: ChatSettings):
         """Initialize the tool execution manager.
         
         Args:
             settings: The application settings
-            debug_log: Logger for debug information
         """
         self.settings = settings
-        self.debug_log = debug_log
+        self.debug_log = logging_manager.get_session(f"ToolExecutionManager-{settings.default_model}",
+                                      formatter=logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
         self.tools_enabled = False
         
         # Tool calling control properties
@@ -201,42 +202,41 @@ class ToolExecutionManager:
         """
         _full_response, _message_tool_calls, _tool_results = full_response, message_tool_calls, tool_results
         
-        # If we have tool results, we need to decide what to do next
-        if tool_results:
-            elapsed_time = time.time() - self.tool_call_start_time
-            
-            # Check if we've hit limits
-            reached_max_iterations = self.current_tool_call_iteration >= self.settings.max_tool_call_iteration
-            reached_time_limit = elapsed_time >= self.settings.max_working_time
-            
-            if reached_max_iterations or reached_time_limit:
-                # We've reached a limit, return what we have
-                limit_reason = "maximum iterations" if reached_max_iterations else "time limit"
-                self.debug_log.warning(f"Reached {limit_reason} for tool calling ({self.current_tool_call_iteration} iterations, {elapsed_time:.1f}s)")
-                return _full_response, _message_tool_calls, _tool_results
-            
-            # Continue with sequential tool calling - prepare new payload with updated messages
-            self.debug_log.info("Preparing next payload for sequential tool calling")
-            history.add_user_message(f"Given the tool results: {tool_results}, do you have enough information to answer the original query: `{self.root_tool_query}`? If not, please ask for more information or continue using tools.")
-            
-            # Prepare the next payload
-            payload = api_manager.prepare_request_payload(history.get_messages())
-            if self.tools_enabled:
-                payload = api_manager.add_tools_to_payload(payload, self.get_tools_for_payload())
-            
-            _full_response, _message_tool_calls, _tool_results = await api_manager.stream_response(
-                 session, payload, history, print_output=False, update_history=True
-             )
+        elapsed_time = time.time() - self.tool_call_start_time
+        
+        # Check if we've hit limits
+        reached_max_iterations = self.current_tool_call_iteration >= self.settings.max_tool_call_iteration
+        reached_time_limit = elapsed_time >= self.settings.max_working_time
+        
+        if reached_max_iterations or reached_time_limit:
+            # We've reached a limit, return what we have
+            limit_reason = "maximum iterations" if reached_max_iterations else "time limit"
+            self.debug_log.warning(f"Reached {limit_reason} for tool calling ({self.current_tool_call_iteration} iterations, {elapsed_time:.1f}s)")
+            return _full_response, _message_tool_calls, _tool_results
+        
+        # Continue with sequential tool calling - prepare new payload with updated messages
+        self.debug_log.info("Preparing next payload for sequential tool calling")
+        history.add_user_message(f"Given the tool results: {tool_results}, do you have enough information to answer the original query: `{self.root_tool_query}`? If not, please ask for more information or continue using tools.")
+        
+        # Prepare the next payload
+        payload = api_manager.prepare_request_payload(history.get_messages())
+        
+        payload = api_manager.add_tools_to_payload(payload, self.get_tools_for_payload())
+    
+        __full_response, __message_tool_calls, __tool_results = await api_manager.stream_response(
+                session, payload, history, self, print_output=False, update_history=True
+            )
 
+        if __tool_results:
             # Process the next step (recursive call)
             self.debug_log.info(f"Continuing with tool calling iteration {self.current_tool_call_iteration}/{self.settings.max_tool_call_iteration} ({elapsed_time:.1f}s elapsed)")
             _full_response, _message_tool_calls, _tool_results = await self.handle_tool_calling_chain(
-                                                         session,
-                                                         api_manager, 
-                                                         history,
-                                                         _full_response,
-                                                         _message_tool_calls,
-                                                         _tool_results)
+                                                            session,
+                                                            api_manager, 
+                                                            history,
+                                                            _full_response+"\n\n"+__full_response,
+                                                            _message_tool_calls+__message_tool_calls,
+                                                            _tool_results+__tool_results)
 
         # Return the original response if it was a direct LLM response with no tool usage
         return _full_response, _message_tool_calls, _tool_results

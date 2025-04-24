@@ -1,23 +1,23 @@
 import json
-from typing import List, Dict, Tuple, Any, Optional
-
+from typing import List, Dict, Tuple, Any
+import logging
 import aiohttp
-from core.logging.session_debug_log import SessionDebugLog
+from core.logging.logging_manager import logging_manager
 from config.settings import ChatSettings
 from core.chat.message_history import MessageHistory
 
 class APIManager:
     """Manages API communication with the LLM."""
     
-    def __init__(self, settings: ChatSettings, debug_log: SessionDebugLog):
+    def __init__(self, settings: ChatSettings):
         """Initialize the API manager.
         
         Args:
             settings: The application settings
-            debug_log: Logger for debug information
         """
         self.settings = settings
-        self.debug_log = debug_log
+        self.debug_log = logging_manager.get_session(f"APIManager-{settings.default_model}",
+                                      formatter=logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
         self.model_name = settings.default_model
     
     def prepare_request_payload(self, messages: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -77,7 +77,11 @@ class APIManager:
         """
         return "message" in data and "content" in data["message"]
     
-    async def process_response_data(self, data: Dict[str, Any], message_tool_calls: List, tool_executor) -> Tuple[str, List]:
+    async def process_response_data(self,
+                                    data: Dict[str, Any],
+                                    message_tool_calls: List,
+                                    tool_executor
+                                    ) -> Tuple[str, List]:
         """Process response data and extract content and tool calls.
         
         Args:
@@ -107,7 +111,7 @@ class APIManager:
                               session: aiohttp.ClientSession, 
                               payload: Dict[str, Any], 
                               history: MessageHistory,
-                              tool_executor = None,
+                              tool_executor,
                               print_output: bool = True, 
                               prefix: str = None, 
                               update_history: bool = True) -> Tuple[str, List, List]:
@@ -117,7 +121,7 @@ class APIManager:
             session: The aiohttp client session to use.
             payload: The request payload to send to the API.
             history: The message history to update
-            tool_executor: Optional tool execution manager
+            tool_executor (ToolExecutionManager): Tool execution manager
             print_output: Whether to print the output to the console
             prefix: Optional prefix to print before the response.
             update_history: Whether to update message history with the response.

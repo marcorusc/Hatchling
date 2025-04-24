@@ -3,7 +3,6 @@ import aiohttp
 import logging
 from typing import Optional
 
-from core.logging.session_debug_log import SessionDebugLog
 from core.logging.logging_manager import logging_manager
 from config.settings import ChatSettings
 from core.llm.model_manager import ModelManager
@@ -14,7 +13,7 @@ from mcp_utils.manager import mcp_manager
 class CLIChat:
     """Command-line interface for chat functionality."""
     
-    def __init__(self, settings: ChatSettings, debug_log: Optional[SessionDebugLog] = None):
+    def __init__(self, settings: ChatSettings):
         """Initialize the CLI chat interface.
         
         Args:
@@ -24,11 +23,8 @@ class CLIChat:
         self.settings = settings
         
         # Create a debug log if not provided
-        if debug_log is None:
-            self.debug_log = logging_manager.get_session("CLIChat",
-                                    formatter=logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
-        else:
-            self.debug_log = debug_log
+        self.debug_log = logging_manager.get_session("CLIChat",
+                                formatter=logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
             
         # Create the model manager
         self.model_manager = ModelManager(settings, self.debug_log)
@@ -157,7 +153,6 @@ class CLIChat:
         except Exception as e:
             error_msg = f"An error occurred: {e}"
             self.debug_log.error(error_msg)
-            print(error_msg)
             return
         
         finally:
