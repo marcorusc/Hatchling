@@ -1,10 +1,13 @@
 # Hatchling
 
+![Hatchling Logo](./doc/resources/images/hatchling_wide_dark_bg_transparent.png)
+
 Hatchling is an interactive CLI-based chat application that integrates local Large Language Models (LLMs) through [Ollama](https://ollama.ai/) with the [Model Context Protocol](https://github.com/modelcontextprotocol) (MCP) for tool calling capabilities.
 
 ## Notice
 
-2025/04/25: Hatchling is in its infancy and several updates are quickly. In particular, Hatchling currently contains MCP servers directly in its code base. This will very soon evolve toward a packages environment through additional repositories hosting MCP servers for different fields of science under the names **Hatch! XXX** (where XXX will be biology, chemistry, physics, mathematics, computer science, engineering, and so on).
+> [!WARNING]  
+> **2025/04/25**: Hatchling is in its infancy, and several updates are coming quickly. In particular, Hatchling currently contains MCP servers directly in its codebase. This will soon evolve toward a package-based environment through additional repositories hosting MCP servers for different fields of science under the names **Hatch! XXX** (where XXX will be biology, chemistry, physics, mathematics, computer science, engineering, and so on).
 
 ## Features
 
