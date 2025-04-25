@@ -24,111 +24,25 @@ Hatchling is an interactive CLI-based chat application that integrates local Lar
 - GUI for the chat and all management of the MCP servers
 - User-defined tool chains
 
-
 ## Prerequisites
 
-- [Ollama](https://ollama.ai/) installed and running locally
-- [Docker](https://docs.docker.com/desktop/) (recommended for simplest setup), for [Window](https://docs.docker.com/desktop/setup/install/windows-install/), [Mac](https://docs.docker.com/desktop/setup/install/mac-install/), [Linux](https://docs.docker.com/desktop/setup/install/linux/)
-- Python 3.9+ (for non-Docker installation)
-
-## Ollama Setup
-
-Before using Hatchling, you need to have Ollama running with the required models:
-
-### Installing Ollama
-
-1. Install Ollama by following the instructions at [ollama.ai](https://ollama.ai)
-2. Start the Ollama service:
-   ```bash
-   ollama serve
-   ```
-
-### Pulling Required Models
-
-Pull the default model (or any model you plan to use):
-
-```bash
-# Pull the default model
-ollama pull mistral-small3.1
-
-# Or pull other models
-ollama pull llama2-uncensored
-```
-
-### Using Ollama with Docker
-
-If you're using Docker for both Ollama and Hatchling:
-
-1. Run Ollama in a container:
-   ```bash
-   docker run -d --gpus=all -v ollama:/root/.ollama -p 11434:11434 --name ollama ollama/ollama
-   ```
-
-2. Pull models in the Ollama container:
-   ```bash
-   docker exec -it ollama ollama pull mistral-small3.1
-   ```
-
-3. Configure Hatchling to connect to this Ollama instance:
-   - For Linux:
-     - `NETWORK_MODE=host`
-   - For macOS/Windows:
-     - `NETWORK_MODE=` (empty string)
+- [Docker Desktop](https://docs.docker.com/desktop/) installed and configured with WSL2 (Windows) or running properly on your system (macOS/Linux)
+- Recommended: GPU support configured for better performance with LLMs
 
 ## Installation & Running
 
-### Option 1: Docker (Recommended)
+Hatchling is designed to run with Docker for a consistent experience across platforms:
 
-The easiest and most reliable way to run Hatchling is with Docker:
-1. Clone the repository:
+1. **Setup Docker and Ollama**:
+   - Follow the [detailed Docker setup instructions](./doc/articles/docker-setup.md) to set up Docker Desktop and Ollama with GPU support (if available)
+
+2. **Run Hatchling**:
    ```bash
-   git clone https://github.com/yourusername/hatchling.git
-   cd hatchling
+   # From the docker directory in your project
+   docker-compose run --rm hatchling
    ```
 
-2. Build the Docker image:
-   ```bash
-   docker-compose -f docker/docker-compose.yml build
-   ```
-
-3. Run the container:
-   ```bash
-   docker-compose -f docker/docker-compose.yml run --rm hatchling
-   ```
-
-### Option 2: Python Environment
-
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/yourusername/hatchling.git
-   cd hatchling
-   ```
-
-2. Create and activate an environment. Via Conda:
-   ```bash
-   conda create -n forHatchling python=3.12
-   conda activate forHatchling
-   ```
-   OR, via Python native environment
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
-
-3. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. Install the package in development mode:
-   ```bash
-   pip install -e .
-   ```
-
-5. Run the application:
-   ```bash
-   python app.py
-   ```
+For complete installation and setup details, including GPU configuration, see our [Docker Setup Guide](./doc/articles/docker-setup.md).
 
 ## Configuration
 
@@ -141,24 +55,9 @@ Configuration is managed through environment variables or a `.env` file:
 | `MCP_SERVER_PATH` | Path to the MCP server script | `mcp_utils/servers/arithmetic.py` |
 | `NETWORK_MODE` | Docker network mode | `host` (for Linux) |
 
-### Docker-Specific Configuration
-
-When running with Docker, you can modify the environment variables:
-
-```bash
-# Set environment variables before running
-export OLLAMA_API_URL=http://host.docker.internal:11434/api
-export DEFAULT_MODEL=llama2-uncensored
-docker-compose -f docker/docker-compose.yml up
-```
-
-Or modify the `.env` file in the project root.
-
 ## Usage
 
 ### Running with Docker
-
-When using Docker, you can pass the same parameters through environment variables or by overriding the command:
 
 ```bash
 # Basic usage
@@ -169,26 +68,7 @@ docker-compose -f docker/docker-compose.yml run --rm -e DEFAULT_MODEL=llama2-unc
 
 # Start with MCP server automatically and use a custom MCP server path
 docker-compose -f docker/docker-compose.yml run --rm hatchling python app.py --start-mcp-server --mcp-server-path mcp_utils/servers/arithmetic.py
-
 ```
-
-### Running the Application
-
-```bash
-# Basic usage
-python app.py
-
-# Specify a different model
-python app.py --model llama2-uncensored
-
-# Start with MCP server automatically
-python app.py --start-mcp-server
-
-# Custom MCP server path
-python app.py --mcp-server-path path/to/your/mcp_server.py
-```
-
-For more complex configurations, you can create a custom `.env` file or modify the docker-compose.yml file to include your preferred settings.
 
 ### Chat Commands
 
@@ -250,7 +130,7 @@ You can extend Hatchling with custom MCP tools by creating new server modules:
 2. Define your MCP tools using the `@mcp.tool()` decorator
 3. Run the application with your custom server path:
    ```bash
-   python app.py --mcp-server-path mcp_utils/servers/your_custom_server.py --start-mcp-server
+   docker-compose -f docker/docker-compose.yml run --rm hatchling python app.py --mcp-server-path mcp_utils/servers/your_custom_server.py --start-mcp-server
    ```
 
 ### Example Custom Tool
