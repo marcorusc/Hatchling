@@ -19,9 +19,9 @@ async def main():
     """
     parser = argparse.ArgumentParser(description='LLM with MCP Tool Calling')
     parser.add_argument('--start-mcp-server', action='store_true', help='Start the MCP server automatically')
-    parser.add_argument('--mcp-server-path', type=str, default='mcp_utils/servers/arithmetic.py',
+    parser.add_argument('--mcp-server-path', type=str, default=os.environ.get("MCP_SERVER_PATH", "mcp_utils/servers/arithmetic.py"),
                         help='Path to the MCP server script (default: mcp_utils/servers/arithmetic.py)')
-    parser.add_argument('--model', type=str, default='mistral-small3.1',
+    parser.add_argument('--model', type=str, default=os.environ.get("DEFAULT_MODEL", "mistral-small3.1"),
                         help='Ollama model to use (default: mistral-small3.1)')
     args = parser.parse_args()
     
