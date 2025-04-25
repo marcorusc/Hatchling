@@ -10,7 +10,7 @@ services:
     volumes:
       - ../:/app
       - ../__temp__:/app/__temp__
-    env_file: ../.env
+    env_file: .env
     environment:
       - PYTHONPATH=/app
     network_mode: ${NETWORK_MODE}
