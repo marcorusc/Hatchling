@@ -10,10 +10,8 @@ services:
     volumes:
       - ../:/app
       - ../__temp__:/app/__temp__
+    env_file: ../.env
     environment:
-      - OLLAMA_API_URL=${OLLAMA_API_URL:-http://host.docker.internal:11434/api}
-      - DEFAULT_MODEL=${DEFAULT_MODEL:-mistral-small3.1}
-      - MCP_SERVER_PATH=${MCP_SERVER_PATH:-mcp_server_arithmetics.py}
       - PYTHONPATH=/app
     network_mode: ${NETWORK_MODE}
     # Use Docker's built-in interactive mode
