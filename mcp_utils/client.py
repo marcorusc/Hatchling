@@ -85,6 +85,11 @@ class MCPClient:
             
             self.debug_log.info(f"Connected to MCP server: {server_path}")
             self.debug_log.info(f"Discovered {len(self.tools)} tools: {', '.join(self.tools.keys())}")
+
+            # List available citations
+            citations = await self.get_citations()
+            self.debug_log.info("Tool Origin Citation: " + citations["origin"])
+            self.debug_log.info("MCP Implementation Citation: " + citations["mcp"])
             
             # Start heartbeat task to monitor connection
             self._start_heartbeat()
@@ -192,6 +197,57 @@ class MCPClient:
                 self.read = None
                 self.write = None
                 self._reconnection_attempts = 0
+    
+    async def get_citations(self) -> Dict[str, str]:
+        """Get citations from the MCP server.
+        
+        Returns:
+            Dict[str, str]: Dictionary with origin and MCP citations.
+        """
+        if not self.connected or not self.session:
+            raise ConnectionError("Not connected to MCP server")
+            
+        citations = {
+            "server_name": "None",
+            "origin": "Citation not available",
+            "mcp": "Citation not available"
+        }
+
+        try:
+            # Extract server name from the path server uri
+            try:
+                server_name_uri = f"name://{self.server_path[1:]}"
+                server_name_response = await self.session.read_resource(uri=server_name_uri)
+                if server_name_response and server_name_response.contents:
+                    citations["server_name"] = server_name_response.contents[0].text
+                    self.debug_log.debug(f"Retrieved server name from {server_name_uri}: {citations["server_name"]}")
+            except Exception as e:
+                self.debug_log.error(f"Failed to get server name: {e}")
+                
+            # Try to read origin citation
+            try:
+                origin_uri = f"citation://origin/{citations["server_name"]}"
+                origin_response = await self.session.read_resource(uri=origin_uri)
+                if origin_response and origin_response.contents:
+                    citations["origin"] = origin_response.contents[0].text
+                    self.debug_log.debug(f"Retrieved origin citation from {origin_uri}")
+            except Exception as e:
+                self.debug_log.error(f"Failed to get origin citation: {e}")
+            
+            # Try to read MCP citation
+            try:
+                mcp_uri = f"citation://mcp/{citations["server_name"]}"
+                mcp_response = await self.session.read_resource(uri=mcp_uri)
+                if mcp_response and mcp_response.contents:
+                    citations["mcp"] = mcp_response.contents[0].text
+                    self.debug_log.debug(f"Retrieved MCP citation from {mcp_uri}")
+            except Exception as e:
+                self.debug_log.error(f"Failed to get MCP citation: {e}")
+                
+        except Exception as e:
+            self.debug_log.error(f"Error retrieving citations: {e}")
+            
+        return citations
     
     async def execute_tool(self, tool_name: str, arguments: Dict[str, Any]) -> Any:
         """Execute an MCP tool by name with given arguments.

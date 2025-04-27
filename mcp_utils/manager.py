@@ -36,6 +36,9 @@ class MCPManager:
         
         # Tool tracking
         self._tool_client_map = {}  # Map of tool names to clients that provide them
+
+        # Hatch server usage
+        self._used_servers_in_session = set()
         
         # Adapter for Ollama format
         self._adapter = None
@@ -240,6 +243,7 @@ class MCPManager:
             raise ValueError(f"Tool '{tool_name}' not found in any connected MCP server")
             
         client = self._tool_client_map[tool_name]
+        self._used_servers_in_session.add(client.server_path)
         
         try:
             return await client.execute_tool(tool_name, arguments)
@@ -258,6 +262,29 @@ class MCPManager:
             
             # Re-raise the exception
             raise
+    
+    async def get_citations_for_session(self) -> Dict[str, Dict[str, str]]:
+        """Get citations for all servers used in the current session.
+
+        Returns:
+            response (Dict[str, Dict[str, str]]]: Dictionary of citations for each server.
+        """
+        citations = {}
+        
+        for path in self._used_servers_in_session:
+            if path in self.mcp_clients:
+                client = self.mcp_clients[path]
+                try:
+                    server_citations = await client.get_citations()
+                    citations[path] = server_citations
+                except Exception as e:
+                    self.debug_log.error(f"Error getting citations for {path}: {e}")
+        
+        return citations
+
+    def reset_session_tracking(self):
+        """Reset the tracking of which servers were used."""
+        self._used_servers_in_session.clear()
     
     async def process_tool_calls(self, tool_calls: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Process tool calls in Ollama format.

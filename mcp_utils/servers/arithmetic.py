@@ -1,16 +1,11 @@
 import logging
-from mcp.server.fastmcp import FastMCP
-from core.logging.logging_manager import logging_manager
+from mcp_utils.hatch_mcp import HatchMCP
 
-# Get a logger from the logging_manager
-log = logging_manager.get_session("MCPArithmeticTools",
-                                  formatter=logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+hatch_mcp = HatchMCP("ArithmeticTools",
+                origin_citation="Jacopin Eliott, \"Origin: Example MCP Server for Hatch!\", April 2025",
+                mcp_citation="Jacopin Eliott, \"MCP: Example Arithmetic Tools for Hatch!\", April 2025")
 
-
-# Create MCP server
-mcp = FastMCP("MCPArithmeticTools")
-
-@mcp.tool()
+@hatch_mcp.server.tool()
 def add(a: float, b: float) -> float:
     """Add two numbers together.
     
@@ -21,10 +16,10 @@ def add(a: float, b: float) -> float:
     Returns:
         float: Sum of a and b.
     """
-    log.info(f"Adding {a} + {b}")
+    hatch_mcp.logger.info(f"Adding {a} + {b}")
     return a + b
 
-@mcp.tool()
+@hatch_mcp.server.tool()
 def subtract(a: float, b: float) -> float:
     """Subtract second number from first number.
     
@@ -35,10 +30,10 @@ def subtract(a: float, b: float) -> float:
     Returns:
         float: Difference (a - b).
     """
-    log.info(f"Subtracting {a} - {b}")
+    hatch_mcp.logger.info(f"Subtracting {a} - {b}")
     return a - b
 
-@mcp.tool()
+@hatch_mcp.server.tool()
 def multiply(a: float, b: float) -> float:
     """Multiply two numbers together.
     
@@ -49,10 +44,10 @@ def multiply(a: float, b: float) -> float:
     Returns:
         float: Product of a and b.
     """
-    log.info(f"Multiplying {a} * {b}")
+    hatch_mcp.logger.info(f"Multiplying {a} * {b}")
     return a * b
 
-@mcp.tool()
+@hatch_mcp.server.tool()
 def divide(a: float, b: float) -> float:
     """Divide first number by second number.
     
@@ -67,13 +62,13 @@ def divide(a: float, b: float) -> float:
         ValueError: If the divisor (b) is zero.
     """
     if b == 0:
-        log.error("Division by zero attempted")
+        hatch_mcp.logger.error("Division by zero attempted")
         raise ValueError("Cannot divide by zero")
     
-    log.info(f"Dividing {a} / {b}")
+    hatch_mcp.logger.info(f"Dividing {a} / {b}")
     return a / b
 
 if __name__ == "__main__":
-    log.info("Starting MCP server with arithmetic tools")
+    hatch_mcp.logger.info("Starting MCP server with arithmetic tools")
     
-    mcp.run()
+    hatch_mcp.server.run()
