@@ -3,6 +3,7 @@ import logging
 from typing import List, Dict, Tuple, Any, Optional
 
 from core.logging.session_debug_log import SessionDebugLog
+from mcp_utils.manager import mcp_manager
 from core.logging.logging_manager import logging_manager
 from config.settings import ChatSettings
 from core.chat.message_history import MessageHistory
@@ -116,6 +117,23 @@ class ChatSession:
             else:  # final response
                 prompt += "Provide a final answer to the original question based on these complete results."
             
+            # Only fetch and include citations if this is the final response
+            if is_final:
+                
+                citations = await mcp_manager.get_citations_for_session()
+                
+                if citations:
+                    # Add citations to the prompt
+                    prompt += "\n\n"
+                    prompt += "Please include the following citations for the tools used in your response. After your main answer, add a section titled 'Citations' with this information:"
+                    for server_citations in citations.values():
+                        prompt += f"\n- {server_citations["server_name"]}"
+                        prompt += f"\n  Origin: {server_citations["origin"]}"
+                        prompt += f"\n  Implementation: {server_citations["mcp"]}"
+                
+                # Reset tracking for next session
+                mcp_manager.reset_session_tracking()
+            
             prompt += "\n\n"
             prompt += "Adapt the the level of complexity and information in your answer to the the individual tool result."
             prompt += " Simple tool result leads to simple answer, while complex tool result lead to more details in the final answer."
@@ -143,10 +161,6 @@ class ChatSession:
             full_response, _, _ = await self.api_manager.stream_response(
                 session, payload, clean_history, self.tool_executor, print_output=True, prefix=prefix, update_history=True
             )
-            
-            # Add the formatted response as an assistant message
-            if full_response:
-                self.history.add_assistant_message(full_response)
                     
         except Exception as e:
             response_type = "final" if is_final else "partial"
