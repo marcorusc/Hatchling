@@ -1,6 +1,9 @@
 import logging
 import io
+import os
+from pathlib import Path
 from typing import Dict, Optional, List, Union
+from logging.handlers import RotatingFileHandler
 from core.logging.session_debug_log import SessionDebugLog
 
 
@@ -24,8 +27,8 @@ class LoggingManager:
         # Initialize only once
         self._initialized = True
         
-        # Default CLI log level (for stdout)
-        self.cli_log_level = logging.INFO
+        # Load log settings from environment variables
+        self._load_log_settings()
         
         # Default formatter for root logger
         self.default_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -36,11 +39,32 @@ class LoggingManager:
         # Configure root logger for CLI output
         self.configure_root_logger()
     
+    def _load_log_settings(self):
+        """Load logging settings from environment variables."""
+        # Get log level from environment (default to INFO)
+        log_level_str = os.environ.get('LOG_LEVEL', 'INFO').upper()
+        log_levels = {
+            'DEBUG': logging.DEBUG,
+            'INFO': logging.INFO,
+            'WARNING': logging.WARNING,
+            'ERROR': logging.ERROR,
+            'CRITICAL': logging.CRITICAL
+        }
+        self.log_level = log_levels.get(log_level_str, logging.INFO)
+        
+        # Get log file path from environment
+        self.log_file = os.environ.get('LOG_FILE')
+        
+        # Create directory for log file if needed
+        if self.log_file:
+            log_path = Path(self.log_file)
+            if log_path.parent.name:  # If there's a parent directory
+                log_path.parent.mkdir(exist_ok=True, parents=True)
+    
     def configure_root_logger(self):
-        """Configure the root logger with CLI handler."""
+        """Configure the root logger with CLI handler and file handler if configured."""
         # Get the root logger
         root_logger = logging.getLogger()
-        root_logger.setLevel(logging.DEBUG)  # Capture everything at root level
         
         # Remove existing handlers to avoid duplicates if reconfigured
         for handler in root_logger.handlers[:]:
@@ -48,24 +72,44 @@ class LoggingManager:
             
         # Create console handler
         console = logging.StreamHandler()
-        console.setLevel(self.cli_log_level)
         console.setFormatter(self.default_formatter)
         root_logger.addHandler(console)
+        
+        # Add file handler if log file is specified
+        if self.log_file:
+            try:
+                # Use rotating file handler to prevent huge log files
+                file_handler = RotatingFileHandler(
+                    self.log_file, 
+                    maxBytes=10*1024*1024,  # 10 MB
+                    backupCount=5
+                )
+                file_handler.setFormatter(self.default_formatter)
+                root_logger.addHandler(file_handler)
+                
+                logging.info(f"Logging to file: {self.log_file}")
+            except Exception as e:
+                logging.error(f"Failed to set up file logging: {str(e)}")
+        
+        self.set_log_level(self.log_level)
     
-    def set_cli_log_level(self, level: int) -> None:
-        """Set the log level for CLI output.
+    def set_log_level(self, level: int) -> None:
+        """Set the log level for all loggers and handlers.
         
         Args:
             level (int): The log level (e.g., logging.DEBUG, logging.INFO).
         """
-        self.cli_log_level = level
+        self.log_level = level
         
-        # Update console handlers on root logger
-        root_logger = logging.getLogger()
-        for handler in root_logger.handlers:
-            if isinstance(handler, logging.StreamHandler) and not isinstance(handler.stream, io.StringIO):
-                handler.setLevel(level)
-    
+        # Set level for all existing loggers
+        for logger_name in logging.root.manager.loggerDict:
+            logger = logging.getLogger(logger_name)
+            logger.setLevel(self.log_level)
+            
+            # Also update handlers
+            for handler in logger.handlers:
+                handler.setLevel(self.log_level)
+
     def get_session(self, name: str, 
                    formatter: Optional[logging.Formatter] = None) -> SessionDebugLog:
         """Get a session debug log by name, creating it if it doesn't exist.
@@ -126,7 +170,7 @@ class LoggingManager:
             logging.StreamHandler: A configured console handler.
         """
         console = logging.StreamHandler()
-        console.setLevel(self.cli_log_level)
+        console.setLevel(self.log_level)
         console.setFormatter(formatter or self.default_formatter)
         return console
 

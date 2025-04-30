@@ -50,7 +50,7 @@ class APIManager:
         if tools:
             payload["tools"] = tools
             payload["tool_choice"] = "auto"
-            self.debug_log.debug(f"Added {len(tools)} tools to payload")
+            self.debug_log.debug(f"Added {len(tools)} tools to payload: {tools}")
         return payload
     
     def has_tool_calls(self, data: Dict[str, Any]) -> bool:

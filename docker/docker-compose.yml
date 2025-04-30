@@ -6,10 +6,13 @@ services:
       dockerfile: ./docker/Dockerfile
     volumes:
       - ../:/app
-      - ../__temp__:/app/__temp__
+      - hatchling_logs:/app/__logs__
     env_file: .env
     environment:
       - PYTHONPATH=/app
     network_mode: ${NETWORK_MODE}
     tty: true
     stdin_open: true
+
+volumes:
+  hatchling_logs:

@@ -100,7 +100,7 @@ class ChatSession:
         """
         try:
             response_type = "final" if is_final else "partial"
-            self.debug_log.info(f"Generating {response_type} response for tool operations")
+            self.debug_log.debug(f"Generating {response_type} response for tool operations")
             
             # Build the prompt based on whether it's a final or partial response
             prompt = f"I used tools in reaction to: `{self.tool_executor.root_tool_query}`."
@@ -138,7 +138,7 @@ class ChatSession:
             prompt += "Adapt the the level of complexity and information in your answer to the the individual tool result."
             prompt += " Simple tool result leads to simple answer, while complex tool result lead to more details in the final answer."
                 
-            self.debug_log.info(f"Prompt for formatting:\n{prompt}")
+            self.debug_log.debug(f"Prompt for formatting:\n{prompt}")
             
             # Create a clean message history with just what we need for formatting
             clean_history = MessageHistory(self.debug_log)

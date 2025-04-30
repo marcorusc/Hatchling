@@ -1,6 +1,6 @@
 # Hatchling
 
-![Hatchling Logo](./doc/resources/images/hatchling_wide_dark_bg_transparent.png)
+![Hatchling Logo](./doc/resources/images/Logo/hatchling_wide_dark_bg_transparent.png)
 
 Hatchling is an interactive CLI-based chat application that integrates local Large Language Models (LLMs) through [Ollama](https://ollama.ai/) with the [Model Context Protocol](https://github.com/modelcontextprotocol) (MCP) for tool calling capabilities. It is meant to be the frontend for using all MCP servers in Hatch!
 
@@ -59,6 +59,8 @@ Configuration is managed through environment variables or a `.env` file:
 | `DEFAULT_MODEL` | Default LLM model to use | `mistral-small3.1` |
 | `MCP_SERVER_PATH` | Path to the MCP server script | `mcp_utils/servers/arithmetic.py` |
 | `NETWORK_MODE` | Docker network mode | `host` (for Linux) |
+| `LOG_LEVEL` | The default log level at start up | `INFO` |
+| `LOG_FILE` | The path to the file where log entries will be saved (rolling 10 MB) | `__logs__/app.log` |
 
 ## Usage
 

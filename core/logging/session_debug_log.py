@@ -16,19 +16,14 @@ class SessionDebugLog:
         """
         # Create a unique logger for this session
         self.logger = logging.getLogger(name)
-        self.logger.setLevel(logging.INFO)
         
-        # This is the key change - keep propagate=True so logs go to root logger
+        # Keep propagate=True so logs go to root logger
         # which handles console output properly with just one instance
         self.logger.propagate = True
         
         # Create a StringIO buffer just for in-memory storage
         # but don't add a second handler that would cause duplicate console output
         self.log_buffer = io.StringIO()
-        
-        # Use the provided formatter or create a default one
-        if formatter is None:
-            formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         
         # Store the session name
         self.name = name

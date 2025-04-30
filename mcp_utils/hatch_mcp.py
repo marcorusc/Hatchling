@@ -1,3 +1,4 @@
+import os
 import inspect
 import logging
 from typing import Optional
@@ -25,7 +26,7 @@ class HatchMCP():
         )
 
         # Create the underlying FastMCP server
-        self.server = FastMCP(name)
+        self.server = FastMCP(name, log_level=os.environ.get('LOG_LEVEL', 'INFO').upper())
         self.name = name
         self.module_name = "" #the file name of the calling module
         

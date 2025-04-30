@@ -58,9 +58,7 @@ class CLIChat:
             # Disconnect after checking
             await mcp_manager.disconnect_all()
         else:
-            self.debug_log.warning("MCP server is not available. You can start the MCP server by running:")
-            self.debug_log.warning("python mcp_server_test.py")
-            self.debug_log.warning("Continuing without MCP tools...")
+            self.debug_log.warning("MCP server is not available. Continuing without MCP tools...")
             
         # Initialize chat session
         self.chat_session = ChatSession(self.settings)
@@ -87,7 +85,6 @@ class CLIChat:
                 self.debug_log.info(f"Model {self.settings.default_model} is already pulled.")
                 return True
             else:
-                self.debug_log.info(f"Pulling model {self.settings.default_model}...")
                 await self.model_manager.pull_model(session, self.settings.default_model)
                 return True
         except Exception as e:
