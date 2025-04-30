@@ -59,6 +59,8 @@ Configuration is managed through environment variables or a `.env` file:
 | `DEFAULT_MODEL` | Default LLM model to use | `mistral-small3.1` |
 | `MCP_SERVER_PATH` | Path to the MCP server script | `mcp_utils/servers/arithmetic.py` |
 | `NETWORK_MODE` | Docker network mode | `host` (for Linux) |
+| `LOG_LEVEL` | The default log level at start up | `INFO` |
+| `LOG_FILE` | The path to the file where log entries will be saved (rolling 10 MB) | `__logs__/app.log` |
 
 ## Usage
 
