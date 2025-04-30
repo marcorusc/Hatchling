@@ -32,7 +32,7 @@ class ChatCommandHandler:
             'quit': (self._cmd_exit, "End the chat session"),
             'clear': (self._cmd_clear, "Clear the chat history"),
             'show_logs': (self._cmd_show_logs, "Display session logs. Usage: show_logs [n]"),
-            'set_log_level': (self._cmd_set_log_level, "Change log level. Usage: set_log_level <level>"),
+            'set_log_level': (self._cmd_set_log_level, "Change log level (debug, info, warning, error, critical). Usage: set_log_level <level>"),
             'set_max_tool_call_iterations': (self._cmd_set_max_iterations, 
                                    "Set max tool call iterations. Usage: set_max_tool_call_iterations <n>"),
             'set_max_working_time': (self._cmd_set_max_working_time, 
@@ -169,7 +169,7 @@ class ChatCommandHandler:
         }
         
         if level_name in level_map:
-            logging_manager.set_cli_log_level(level_map[level_name])
+            logging_manager.set_log_level(level_map[level_name])
             self.debug_log.info(f"Log level set to {level_name}")
             print(f"Log level set to {level_name}")
         else:
