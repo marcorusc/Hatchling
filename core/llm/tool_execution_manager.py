@@ -104,7 +104,7 @@ class ToolExecutionManager:
                     pass
                 
                 # Show the tool result to the user
-                print(f"[Tool result: {result_content}]\n")
+                self.debug_log.info(f"[Tool result: {result_content}]")
                 
                 # Return the tool result
                 return {
@@ -115,7 +115,6 @@ class ToolExecutionManager:
                 }
         except Exception as e:
             self.debug_log.error(f"Error executing tool: {e}")
-            print(f"[Error executing tool: {e}]\n")
         
         return None
     
@@ -140,7 +139,7 @@ class ToolExecutionManager:
             arguments = {}
         
         # Show tool usage to the user
-        print(f"\n[Using tool: {function_name} with arguments: {arguments}]\n")
+        self.debug_log.info(f"[Using tool: {function_name} with arguments: {json.dumps(arguments)}]")
         
         # Execute tool and get result
         if self.tools_enabled:
@@ -216,7 +215,7 @@ class ToolExecutionManager:
             return _full_response, _message_tool_calls, _tool_results
         
         # Continue with sequential tool calling - prepare new payload with updated messages
-        self.debug_log.info("Preparing next payload for sequential tool calling")
+        self.debug_log.debug("Preparing next payload for sequential tool calling")
         history.add_user_message(f"Given the tool results: {tool_results}, do you have enough information to answer the original query: `{self.root_tool_query}`? If not, please ask for more information or continue using tools.")
         
         # Prepare the next payload

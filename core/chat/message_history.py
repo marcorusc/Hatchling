@@ -21,7 +21,7 @@ class MessageHistory:
         """
         self.messages.append({"role": "user", "content": content})
         if self.debug_log:
-            self.debug_log.debug(f"Added user message: {content[:50]}...")
+            self.debug_log.debug(f"MessageHistory - Added user message: {content}")
     
     def add_assistant_message(self, content: str, tool_calls: List[Dict[str, Any]] = None) -> None:
         """Add an assistant message to the history.
@@ -40,7 +40,7 @@ class MessageHistory:
             })
         
         if self.debug_log:
-            self.debug_log.debug(f"Added assistant message: {content[:50]}...")
+            self.debug_log.debug(f"MessageHistory - Added assistant message: {content}")
     
     def add_tool_result(self, tool_call_id: str, function_name: str, content: str) -> None:
         """Add a tool result to the history.
@@ -58,7 +58,7 @@ class MessageHistory:
         })
         
         if self.debug_log:
-            self.debug_log.debug(f"Added tool result for {function_name}")
+            self.debug_log.debug(f"MessageHistory - Added tool result for {function_name}: {content}")
     
     def update_message_history(self, full_response: str, message_tool_calls: List[Dict[str, Any]], 
                                tool_results: List[Dict[str, Any]]) -> None:
@@ -139,7 +139,7 @@ class MessageHistory:
         """Clear all messages."""
         self.messages = []
         if self.debug_log:
-            self.debug_log.debug("Message history cleared")
+            self.debug_log.info("MessageHistory - Cleared!")
     
     def __len__(self) -> int:
         """Get the number of messages.

@@ -171,11 +171,11 @@ class ChatCommandHandler:
         if level_name in level_map:
             logging_manager.set_log_level(level_map[level_name])
             self.debug_log.info(f"Log level set to {level_name}")
-            print(f"Log level set to {level_name}")
+            if logging_manager.log_level > logging.INFO:
+                # the only place where use a print given the change of log level might disable the logger
+                print(f"Log level set to {level_name}")
         else:
-            self.debug_log.error(f"Unknown log level: {level_name}")
-            print(f"Unknown log level: {level_name}")
-            print("Available levels: debug, info, warning, error, critical")
+            self.debug_log.error(f"Unknown log level: {level_name}. Available levels are: debug, info, warning, error, critical")
         return True
     
     async def _cmd_enable_tools(self, _: str) -> bool:
@@ -190,9 +190,8 @@ class ChatCommandHandler:
         connected = await self.chat_session.initialize_mcp(self.settings.mcp_server_urls)
         if not connected:
             self.debug_log.error("Failed to connect to MCP servers. Tools not enabled.")
-            print("Failed to connect to MCP servers. Tools not enabled.")
         else:
-            print("Tools enabled successfully!")
+            self.debug_log.info("MCP tools enabled successfully!")
         return True
     
     async def _cmd_disable_tools(self, _: str) -> bool:
@@ -209,9 +208,9 @@ class ChatCommandHandler:
             self.chat_session.tool_executor.tools_enabled = False
             # Clear messages that might have tool-specific content
             self.chat_session.history.clear()
-            print("Tools disabled.")
+            self.debug_log.info("MCP tools disabled successfully!")
         else:
-            print("Tools were not enabled.")
+            self.debug_log.warning("MCP tools are already disabled.")
         return True
     
     def _cmd_set_max_iterations(self, args: str) -> bool:
@@ -228,13 +227,10 @@ class ChatCommandHandler:
             if iterations > 0:
                 self.settings.max_tool_call_iteration = iterations
                 self.debug_log.info(f"Maximum tool call iterations set to {iterations}")
-                print(f"Maximum tool call iterations set to {iterations}")
             else:
                 self.debug_log.error("Maximum iterations must be greater than 0")
-                print("Maximum iterations must be greater than 0")
         except ValueError:
-            self.debug_log.error("Invalid value for maximum iterations")
-            print("Usage: set_max_tool_call_iterations <positive integer>")
+            self.debug_log.error("Invalid value for maximum iterations. Usage: set_max_tool_call_iterations <positive integer>")
         return True
     
     def _cmd_set_max_working_time(self, args: str) -> bool:
@@ -251,11 +247,8 @@ class ChatCommandHandler:
             if seconds > 0:
                 self.settings.max_working_time = seconds
                 self.debug_log.info(f"Maximum working time set to {seconds} seconds")
-                print(f"Maximum working time set to {seconds} seconds")
             else:
                 self.debug_log.error("Maximum working time must be greater than 0")
-                print("Maximum working time must be greater than 0")
         except ValueError:
-            self.debug_log.error("Invalid value for maximum working time")
-            print("Usage: set_max_working_time <positive number>")
+            self.debug_log.error("Invalid value for maximum working time. Usage: set_max_working_time <positive number>")
         return True

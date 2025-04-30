@@ -40,7 +40,7 @@ class OllamaMCPAdapter:
                 # Cache the Ollama schema
                 self._mcp_to_ollama_schemas[tool_name] = ollama_schema
 
-            self.debug_log.info(f"Built schema cache for {len(self._mcp_to_ollama_schemas)} tools")
+            self.debug_log.debug(f"Built schema cache for {len(self._mcp_to_ollama_schemas)} tools")
             
         except Exception as e:
             self.debug_log.error(f"Error building tool schema cache: {e}")
@@ -77,7 +77,7 @@ class OllamaMCPAdapter:
             self.debug_log.warning("No tools available in schema cache")
             return []
             
-        self.debug_log.info(f"Returning {len(self._mcp_to_ollama_schemas)} tools from schema cache")
+        self.debug_log.debug(f"Returning {len(self._mcp_to_ollama_schemas)} tools from schema cache")
         return list(self._mcp_to_ollama_schemas.values())
 
     async def process_tool_calls(self, tool_calls: List[Dict[str, Any]], manager) -> List[Dict[str, Any]]:
@@ -115,7 +115,7 @@ class OllamaMCPAdapter:
         function_call = tool_call.get("function", {})
         function_name = function_call.get("name", "")
         
-        self.debug_log.info(f"Processing tool call: {function_name}")
+        self.debug_log.debug(f"Processing tool call: {function_name}")
         
         # Parse arguments (safely)
         try:
@@ -134,7 +134,7 @@ class OllamaMCPAdapter:
         
         try:
             # Execute the tool using the manager
-            self.debug_log.info(f"Executing tool {function_name} with arguments: {arguments}")
+            self.debug_log.debug(f"Executing tool {function_name} with arguments: {arguments}")
             result = await manager.execute_tool(function_name, arguments)
             
         except ValueError as param_error:

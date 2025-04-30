@@ -53,7 +53,7 @@ class MCPClient:
                 env=os.environ.copy(),  # Use default environment variables
             )
             
-            self.debug_log.info(f"Connecting to MCP server: {server_path}")
+            self.debug_log.debug(f"Connecting to MCP server: {server_path}")
             
             # Create the stdio client connection with a simpler approach
             try:
@@ -127,7 +127,7 @@ class MCPClient:
                     # Try to reconnect
                     if self._reconnection_attempts < self.MAX_RECONNECTION_ATTEMPTS:
                         self._reconnection_attempts += 1
-                        self.debug_log.info(f"Attempting to reconnect ({self._reconnection_attempts}/{self.MAX_RECONNECTION_ATTEMPTS})")
+                        self.debug_log.warning(f"Attempting to reconnect ({self._reconnection_attempts}/{self.MAX_RECONNECTION_ATTEMPTS})")
                         await asyncio.sleep(self.RECONNECTION_DELAY)
                         
                         # Close existing session before reconnecting
@@ -166,7 +166,7 @@ class MCPClient:
         """Disconnect from the MCP server and clean up resources."""
         if self.connected:
             try:
-                self.debug_log.info(f"Disconnecting from MCP server: {self.server_path}")
+                self.debug_log.debug(f"Disconnecting from MCP server: {self.server_path}")
                 
                 # Cancel heartbeat task
                 if self._heartbeat_task:

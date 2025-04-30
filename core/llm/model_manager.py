@@ -37,7 +37,7 @@ class ModelManager:
                 if response.status == 200:
                     data = await response.json()
                     available_models = [model["name"] for model in data.get("models", [])]
-                    print(f"Available models: {available_models}")
+                    self.debug_log.info(f"Available models: {available_models}")
                     return model_name in available_models
                 else:
                     text = await response.text()
@@ -55,7 +55,7 @@ class ModelManager:
         Raises:
             Exception: If there is an error pulling the model.
         """
-        self.debug_log.info(f"Model {model_name} is not available. Pulling the model.")
+        self.debug_log.info(f"Pulling model: {model_name}")
         
         try:
             async with session.post(
@@ -86,10 +86,10 @@ class ModelManager:
                                 try:
                                     data = json.loads(json_obj)
                                     if "status" in data:
-                                        print(f"Status: {data['status']}")
+                                        print(f"Status: {data['status']}", flush=True)
                                     if "completed" in data and "total" in data:
                                         percentage = (data["completed"] / data["total"]) * 100
-                                        print(f"Progress: {percentage:.2f}%")
+                                        print(f"Progress: {percentage:.2f}%", flush=True)
                                 except json.JSONDecodeError:
                                     self.debug_log.error(f"Received invalid JSON during model pull: {json_obj}")
                                 except Exception as e:
