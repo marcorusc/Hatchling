@@ -1,3 +1,4 @@
+import os
 import asyncio
 import logging
 from typing import Dict, Any, Optional
@@ -49,7 +50,7 @@ class MCPClient:
             server_params = StdioServerParameters(
                 command="python",  # Use Python to execute the script
                 args=[server_path],  # Path to the server script
-                env=None,  # Use default environment variables
+                env=os.environ.copy(),  # Use default environment variables
             )
             
             self.debug_log.info(f"Connecting to MCP server: {server_path}")
