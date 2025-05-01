@@ -19,11 +19,15 @@ Hatchling is an interactive CLI-based chat application that integrates local Lar
 
 ## Roadmap
 
-- Package architecture for dynamic loading and switching of MCP servers
-  - Connection to multiple mcp servers
-  - Versioning
-  - CI/CD to the repositories
-  - Allow integration of Third-party MCP servers
+- Package architecture for dynamic loading and switching of MCP servers (for implementation progress check [this branch](https://github.com/CrackingShells/Hatchling/tree/hatch_packman))
+  - [x] Package json schema
+  - [x] Convert _arithmetic_ MCP server example into an example package
+  - [x] Environments (create, remove, list, use)
+  - [ ] Add local packages compliying with Hatch's package json schema
+  - [ ] Add non-Hatch MCP servers
+  - [ ] Move Hatch-Schemas to its own repository
+  - [ ] Move Hatch -the package manager- to its own repository
+  - [ ] Infrastructure for Hatch-Registry
 - Launching **Hatch! Biology** for hosting MCP servers providing access to well-established software and methods such as BLAST, UniProt (and other database) queries, PubMed articles, and such... All with citations!
 - Customize LLMs system prompts, reference past messages, be in control of context history
 - GUI for the chat and all management of the MCP servers
