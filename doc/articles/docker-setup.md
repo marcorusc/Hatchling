@@ -20,11 +20,11 @@ This document provides instructions on how to set up and run the project using D
    ![docker_settings_wsl](../resources/images/docker-setup/docker_settings_position.png)
    - In Docker Desktop, follow the arrows numbered 1, 2, and 3 on the screenshot to navigate through `Settings` > `Resources` > `WSL Integration`.
    - Either enable integration with your default WSL distro (arrow 4.1) OR select a specific one (arrow 4.2)
-   - Click "Apply & Restart" if you make chages (arrow 5)
+   - Click "Apply & Restart" if you make changes (arrow 5)
 
 3. **Setup GPU Support (Optional, but recommended)**:
    - Open a terminal
-     - On Windows, launch the WSL distro that Docker is integrated with.In the previous image, that would be `Ubuntu-24.04`, so run `wsl -d Ubuntu-24.04`, and run the following commands within that distro.
+     - On Windows, launch the WSL distro that Docker is integrated with. In the previous image, that would be `Ubuntu-24.04`, so run `wsl -d Ubuntu-24.04`, and run the following commands within that distro.
    - For NVIDIA GPU support, run:
      ```bash
      # Add NVIDIA repository keys
@@ -53,7 +53,7 @@ This document provides instructions on how to set up and run the project using D
    - Open a terminal capable of running docker commands.
      - In Docker Desktop you can open it by pressing the `Terminal` button:
      ![docker_terminal_position](../resources/images/docker-setup/docker_terminal_position.png)
-     - Or any terminal of your system that has access to Docker
+     - Or any terminal of your system that can access to Docker
    - Write `docker pull ollama/ollama` in the terminal and press enter to run it.
      - It will download about 1.6GB
      - Once finished, click on the `Images` tab (arrow 1) of Docker Desktop, and check that `ollama/ollama` is available (arrow 2)
