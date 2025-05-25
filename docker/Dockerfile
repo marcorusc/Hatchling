@@ -1,5 +1,8 @@
 FROM python:3.12-slim
 
+# Install git
+RUN apt-get update && apt-get install -y git
+
 # Keeps Python from generating .pyc files in the container
 ENV PYTHONDONTWRITEBYTECODE=1
 
@@ -11,9 +14,6 @@ WORKDIR /app
 
 # Copy the current directory contents into the container at /app
 COPY . /app
-
-# Install pip requirements
-RUN python -m pip install -r requirements.txt
 
 # Install the package
 RUN pip install -e /app
@@ -27,4 +27,4 @@ RUN mkdir -p /app/__logs__ && chown -R appuser:appuser /app && chmod -R 775 /app
 USER appuser
 
 # During debugging, this entry point will be overridden. For more information, please refer to https://aka.ms/vscode-docker-python-debug
-CMD ["python", "app.py"]
+CMD ["hatchling"]
