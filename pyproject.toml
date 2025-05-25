@@ -1,0 +1,50 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hatchling"
+dynamic = ["version"]
+description = "LLM with MCP Tool Calling"
+readme = "README.md"
+requires-python = ">=3.12"
+license = {file = "LICENSE"}
+authors = [
+    {name = "Hatchling Developers"}
+]
+classifiers = [
+    "Programming Language :: Python :: 3.12",
+    "License :: OSI Approved :: GNU Affero General Public License v3",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "ollama>=0.4.8",
+    "requests>=2.31.0",
+    "aiohttp>=3.9.1",
+    "asyncio>=3.4.3",
+    "mcp>=1.6.0",
+    "uvicorn>=0.24.0",
+    "fastapi>=0.104.1",
+    "websockets>=12.0",
+    "httpx>=0.25.2",
+    "anyio>=3.7.1",
+
+    "hatch @ git+https://github.com/CrackingShells/Hatch.git@dev"
+]
+
+[project.scripts]
+hatchling = "hatchling.app:main"
+
+[tool.setuptools]
+packages = ["hatchling"]
+include-package-data = true
+package-dir = {hatchling = "hatchling"}
+
+[tool.setuptools.dynamic]
+version = {file = "VERSION"}
+
+[tool.setuptools.package-data]
+hatchling = ["py.typed"]
+
+[project.urls]
+"Repository" = "https://github.com/CrackingShells/Hatchling"
