@@ -2,9 +2,9 @@ import json
 from typing import List, Dict, Tuple, Any
 import logging
 import aiohttp
-from core.logging.logging_manager import logging_manager
-from config.settings import ChatSettings
-from core.chat.message_history import MessageHistory
+from hatchling.core.logging.logging_manager import logging_manager
+from hatchling.config.settings import ChatSettings
+from hatchling.core.chat.message_history import MessageHistory
 
 class APIManager:
     """Manages API communication with the LLM."""

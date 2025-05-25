@@ -4,8 +4,8 @@ import os
 import subprocess
 from typing import Dict, List, Any, Optional
 
-from mcp_utils.client import MCPClient
-from core.logging.logging_manager import logging_manager
+from hatchling.mcp_utils.client import MCPClient
+from hatchling.core.logging.logging_manager import logging_manager
 
 class MCPManager:
     """Centralized manager for everything MCP-related: servers, clients, and adapters."""

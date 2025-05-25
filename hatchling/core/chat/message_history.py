@@ -1,5 +1,5 @@
 from typing import List, Dict, Any, Optional
-from core.logging.session_debug_log import SessionDebugLog
+from hatchling.core.logging.session_debug_log import SessionDebugLog
 
 class MessageHistory:
     """Simple manager for chat message history without any complex optimizations."""

@@ -1,6 +1,6 @@
 import os
 import logging
-from core.logging.logging_manager import logging_manager
+from hatchling.core.logging.logging_manager import logging_manager
 
 logger = logging_manager.get_session("Chat Settings", logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
 

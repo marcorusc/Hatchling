@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 from typing import Dict, Optional, List, Union
 from logging.handlers import RotatingFileHandler
-from core.logging.session_debug_log import SessionDebugLog
+from hatchling.core.logging.session_debug_log import SessionDebugLog
 
 
 class LoggingManager:

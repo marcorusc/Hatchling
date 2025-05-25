@@ -2,9 +2,9 @@ import json
 from typing import List, Tuple
 import aiohttp
 import os
-from mcp_utils.ollama_adapter import OllamaMCPAdapter
-from core.logging.session_debug_log import SessionDebugLog
-from config.settings import ChatSettings
+from hatchling.mcp_utils.ollama_adapter import OllamaMCPAdapter
+from hatchling.core.logging.session_debug_log import SessionDebugLog
+from hatchling.config.settings import ChatSettings
 
 class ModelManager:
     """Manages model availability and downloading."""

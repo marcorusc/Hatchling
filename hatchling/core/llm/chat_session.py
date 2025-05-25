@@ -2,13 +2,13 @@ import aiohttp
 import logging
 from typing import List, Dict, Tuple, Any, Optional
 
-from core.logging.session_debug_log import SessionDebugLog
-from mcp_utils.manager import mcp_manager
-from core.logging.logging_manager import logging_manager
-from config.settings import ChatSettings
-from core.chat.message_history import MessageHistory
-from core.llm.tool_execution_manager import ToolExecutionManager
-from core.llm.api_manager import APIManager
+from hatchling.core.logging.session_debug_log import SessionDebugLog
+from hatchling.mcp_utils.manager import mcp_manager
+from hatchling.core.logging.logging_manager import logging_manager
+from hatchling.config.settings import ChatSettings
+from hatchling.core.chat.message_history import MessageHistory
+from hatchling.core.llm.tool_execution_manager import ToolExecutionManager
+from hatchling.core.llm.api_manager import APIManager
 
 class ChatSession:
     def __init__(self, settings: ChatSettings):

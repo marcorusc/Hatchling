@@ -1,12 +1,12 @@
-#!/usr/bin/env python3
 import asyncio
 import logging
 import os
 import argparse
-from core.logging.logging_manager import logging_manager
-from config.settings import ChatSettings
-from ui.cli_chat import CLIChat
-from mcp_utils.manager import mcp_manager
+import sys
+from hatchling.core.logging.logging_manager import logging_manager
+from hatchling.config.settings import ChatSettings
+from hatchling.ui.cli_chat import CLIChat
+from hatchling.mcp_utils.manager import mcp_manager
 
 # Get logger with custom formatter - this takes advantage of our new implementation
 log = logging_manager.get_session("AppMain", logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))                 

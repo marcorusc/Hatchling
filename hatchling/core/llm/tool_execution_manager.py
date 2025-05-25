@@ -3,9 +3,9 @@ import logging
 import time
 from typing import List, Dict, Tuple, Any, Optional
 
-from mcp_utils.manager import mcp_manager
-from core.logging.logging_manager import logging_manager
-from config.settings import ChatSettings
+from hatchling.mcp_utils.manager import mcp_manager
+from hatchling.core.logging.logging_manager import logging_manager
+from hatchling.config.settings import ChatSettings
 
 class ToolExecutionManager:
     """Manages tool execution and tool calling chains."""

@@ -3,12 +3,12 @@ import aiohttp
 import logging
 from typing import Optional
 
-from core.logging.logging_manager import logging_manager
-from config.settings import ChatSettings
-from core.llm.model_manager import ModelManager
-from core.llm.chat_session import ChatSession
-from core.chat.chat_command_handler import ChatCommandHandler
-from mcp_utils.manager import mcp_manager
+from hatchling.core.logging.logging_manager import logging_manager
+from hatchling.core.llm.model_manager import ModelManager
+from hatchling.core.llm.chat_session import ChatSession
+from hatchling.core.chat.chat_command_handler import ChatCommandHandler
+from hatchling.config.settings import ChatSettings
+from hatchling.mcp_utils.manager import mcp_manager
 
 class CLIChat:
     """Command-line interface for chat functionality."""

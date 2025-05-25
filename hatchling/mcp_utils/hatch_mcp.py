@@ -3,7 +3,7 @@ import inspect
 import logging
 from typing import Optional
 from mcp.server.fastmcp import FastMCP
-from core.logging.logging_manager import logging_manager
+from hatchling.core.logging.logging_manager import logging_manager
 
 class HatchMCP():
     """Base wrapper for MCP servers with citation capabilities."""
