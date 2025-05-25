@@ -1,0 +1,3 @@
+[submodule "ext/Hatch"]
+	path = ext/Hatch
+	url = https://github.com/CrackingShells/Hatch.git
