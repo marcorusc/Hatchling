@@ -6,21 +6,26 @@ from hatchling.core.logging.logging_manager import logging_manager
 from hatchling.mcp_utils.manager import mcp_manager
 from hatchling.config.settings import ChatSettings
 
+from hatch import HatchEnvironmentManager
+
 
 class BaseChatCommands:
     """Handles processing of command inputs in the chat interface."""
 
-    def __init__(self, chat_session, settings: ChatSettings, debug_log: SessionDebugLog):
+    def __init__(self, chat_session, settings: ChatSettings, env_manager: HatchEnvironmentManager, debug_log: SessionDebugLog):
         """Initialize the command handler.
         
         Args:
             chat_session: The chat session this handler is associated with.
             settings (ChatSettings): The chat settings to use.
+            env_manager (HatchEnvironmentManager): The Hatch environment manager.
             debug_log (SessionDebugLog): Logger for command operations.
         """
         self.chat_session = chat_session
         self.settings = settings
+        self.env_manager = env_manager
         self.debug_log = debug_log
+
         self._register_commands()
         
     def _register_commands(self) -> None:

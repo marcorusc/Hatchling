@@ -1,4 +1,3 @@
-# filepath: c:\Users\eliot\Documents\Source\Career\Hatch\Hatchling\core\chat\hatch_commands.py
 import logging
 from typing import Tuple, Dict, Any, List, Optional
 from pathlib import Path
@@ -14,25 +13,19 @@ from hatch import create_package_template
 class HatchCommands:
     """Handles Hatch package manager commands in the chat interface."""
 
-    def __init__(self, chat_session, settings: ChatSettings, debug_log: SessionDebugLog):
+    def __init__(self, chat_session, settings: ChatSettings, env_manager: HatchEnvironmentManager, debug_log: SessionDebugLog):
         """Initialize the Hatch command handler.
         
         Args:
             chat_session: The chat session this handler is associated with.
             settings (ChatSettings): The chat settings to use.
+            env_manager (HatchEnvironmentManager): The Hatch environment manager.
             debug_log (SessionDebugLog): Logger for command operations.
         """
         self.chat_session = chat_session
         self.settings = settings
+        self.env_manager = env_manager
         self.debug_log = debug_log
-        
-        # Initialize the Hatch environment manager
-        self.env_manager = HatchEnvironmentManager(
-            # These could be moved to ChatSettings if preferred
-            environments_dir=Path.home() / ".hatch" / "envs",
-            cache_ttl=86400,  # 1 day default
-            cache_dir=Path.home() / ".hatch" / "cache"
-        )
         
         self._register_commands()
         

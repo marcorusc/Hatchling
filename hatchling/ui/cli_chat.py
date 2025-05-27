@@ -10,6 +10,8 @@ from hatchling.core.chat.chat_command_handler import ChatCommandHandler
 from hatchling.config.settings import ChatSettings
 from hatchling.mcp_utils.manager import mcp_manager
 
+from hatch import HatchEnvironmentManager
+
 class CLIChat:
     """Command-line interface for chat functionality."""
     
@@ -21,6 +23,11 @@ class CLIChat:
             debug_log (Optional[SessionDebugLog]): Logger for debugging information. Defaults to None.
         """
         self.settings = settings
+        
+        self.env_manager = HatchEnvironmentManager(
+            environments_dir = self.settings.hatch_envs_dir,
+            cache_ttl = 86400,  # 1 day default
+        )
         
         # Create a debug log if not provided
         self.debug_log = logging_manager.get_session("CLIChat",
@@ -50,8 +57,12 @@ class CLIChat:
         
         # Check if MCP server is available
         self.debug_log.info("Checking MCP server availability...")
-        mcp_available = await mcp_manager.initialize(self.settings.mcp_server_urls)
-        
+        # Get the name of the current environment
+        name = self.env_manager.get_current_environment()
+        # Retrieve the environment's entry points for the MCP servers
+        mcp_servers_url = self.env_manager.get_servers_entry_points(name)
+        mcp_available = await mcp_manager.initialize(mcp_servers_url)
+
         if mcp_available:
             self.debug_log.info("MCP server is available! Tool calling is ready to use.")
             self.debug_log.info("You can enable tools during the chat session by typing 'enable_tools'")
@@ -64,7 +75,7 @@ class CLIChat:
         self.chat_session = ChatSession(self.settings)
         
         # Initialize command handler
-        self.cmd_handler = ChatCommandHandler(self.chat_session, self.settings, self.debug_log)
+        self.cmd_handler = ChatCommandHandler(self.chat_session, self.settings, self.env_manager, self.debug_log)
         
         return True
     
