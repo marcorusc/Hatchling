@@ -1,6 +1,7 @@
 # Project
 __temp__/
 __logs__/
+**/.hatch
 
 # VSCode
 .vscode/
