@@ -45,7 +45,7 @@ class HatchCommands:
             'hatch:pkg:list': (self._cmd_pkg_list, "List packages in an environment. Usage: hatch:pkg:list [--env <env_name>]"),
 
             # Package creation command
-            'hatch:create': (self._cmd_create_package, "Create a new package template. Usage: hatch:create <name> [--dir <dir>] [--category <category>] [--description <description>]"),
+            'hatch:create': (self._cmd_create_package, "Create a new package template. Usage: hatch:create <name> [--dir <dir>] [--description <description>]"),
 
             # Package validation command
             'hatch:validate': (self._cmd_validate_package, "Validate a package. Usage: hatch:validate <package_dir>"),
@@ -429,7 +429,6 @@ class HatchCommands:
         arg_defs = {
             'name': {'positional': True},
             'dir': {'aliases': ['d'], 'default': '.'},
-            'category': {'aliases': ['c'], 'default': ''},
             'description': {'aliases': ['D'], 'default': ''}
         }
         
@@ -442,13 +441,11 @@ class HatchCommands:
         try:
             name = parsed_args['name']
             target_dir = Path(parsed_args.get('dir', '.')).resolve()
-            category = parsed_args.get('category', '')
             description = parsed_args.get('description', '')
             
             package_dir = create_package_template(
                 target_dir=target_dir,
                 package_name=name,
-                category=category,
                 description=description
             )
             
