@@ -6,6 +6,7 @@ services:
       dockerfile: ./docker/Dockerfile
     volumes:
       - ${HATCH_HOST_CACHE_DIR}:/home/appuser/.hatch
+      - ${HATCH_LOCAL_PACKAGE_DIR}:/app/.local
     env_file: .env
     environment:
       - PYTHONPATH=/app
