@@ -284,6 +284,27 @@ class HatchCommands:
 
             if self.env_manager.set_current_environment(name):
                 self.debug_log.info(f"Current environment set to: {name}")
+
+                # When changing the current environment, we must handle
+                # disconnecting from the previous environment's tools if any,
+                # and connecting to the new environment's tools.
+                if self.chat_session.tool_executor.tools_enabled:
+                    
+                    # Disconnection
+                    self.chat_session.tool_executor.disconnect_tools()
+                    self.debug_log.info("Disconnected from previous environment's tools.")
+
+                    # Get the new environment's entry points for the MCP servers
+                    mcp_servers_url = self.env_manager.get_servers_entry_points(name)
+
+                    if mcp_servers_url:
+                        # Reconnect to the new environment's tools
+                        connected = self.chat_session.initialize_mcp(mcp_servers_url)
+                        if not connected:
+                            self.debug_log.error("Failed to connect to new environment's MCP servers. Tools not enabled.")
+                        else:
+                            self.debug_log.info("Connected to new environment's MCP servers successfully!")
+
             else:
                 self.debug_log.error(f"Failed to set environment: {name}")
                 

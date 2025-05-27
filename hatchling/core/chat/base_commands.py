@@ -141,13 +141,29 @@ class BaseChatCommands:
         Returns:
             bool: True to continue the chat session.
         """
-        connected = await self.chat_session.initialize_mcp(self.settings.mcp_server_urls)
-        if not connected:
-            self.debug_log.error("Failed to connect to MCP servers. Tools not enabled.")
+
+        # If tools are already enabled, do nothing
+        if self.chat_session.tool_executor.tools_enabled:
+            self.debug_log.warning("MCP tools are already enabled.")
+            return True
+
+        # Get the name of the current environment
+        name = self.env_manager.get_current_environment()
+
+        # Retrieve the new environment's entry points for the MCP servers
+        mcp_servers_url = self.env_manager.get_servers_entry_points(name)
+        if mcp_servers_url:
+            # Reconnect to the new environment's tools
+            connected = await self.chat_session.initialize_mcp(mcp_servers_url)
+            if not connected:
+                self.debug_log.error("Failed to connect to new environment's MCP servers. Tools not enabled.")
+            else:
+                self.debug_log.info("Connected to new environment's MCP servers successfully!")
         else:
-            self.debug_log.info("MCP tools enabled successfully!")
+            self.debug_log.error("No MCP servers found for the current environment. Tools cannot be enabled.")
+            return False
         return True
-    
+
     async def _cmd_disable_tools(self, _: str) -> bool:
         """Disable MCP tools.
         

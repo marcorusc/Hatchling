@@ -5,6 +5,7 @@ import subprocess
 from typing import Dict, List, Any, Optional
 
 from hatchling.mcp_utils.client import MCPClient
+from hatchling.mcp_utils.ollama_adapter import OllamaMCPAdapter
 from hatchling.core.logging.logging_manager import logging_manager
 
 class MCPManager:
@@ -30,7 +31,6 @@ class MCPManager:
         # Connection tracking
         self.mcp_clients: Dict[str, MCPClient] = {}
         self.server_processes: Dict[str, subprocess.Popen] = {}
-        self.server_paths: List[str] = []
         self._connection_lock = asyncio.Lock()
         self.connected = False
         
@@ -119,23 +119,21 @@ class MCPManager:
         Returns:
             bool: True if initialization was successful.
         """
-        self.server_paths = server_paths
-        connected = await self.connect_to_servers(auto_start)
+        connected = await self.connect_to_servers(server_paths, auto_start)
         
-        if connected and not self._adapter:
-            # Initialize the adapter
-            from mcp_utils.ollama_adapter import OllamaMCPAdapter
+        if connected and not self._adapter:            
             self._adapter = OllamaMCPAdapter()
             await self._adapter.build_schema_cache(self.get_tools_by_name())
             
         return connected
-    
-    async def connect_to_servers(self, auto_start: bool = False) -> bool:
+
+    async def connect_to_servers(self, server_paths: List[str], auto_start: bool = False) -> bool:
         """Connect to all configured MCP servers.
         
         Args:
+            server_paths (List[str]): List of paths to MCP server scripts.
             auto_start (bool, optional): Whether to start servers if they aren't running. Defaults to False.
-            
+
         Returns:
             bool: True if connected to at least one server successfully.
         """
@@ -144,7 +142,7 @@ class MCPManager:
             
         async with self._connection_lock:
             # Validate server paths
-            valid_paths = self.validate_server_paths(self.server_paths)
+            valid_paths = self.validate_server_paths(server_paths)
             if not valid_paths:
                 self.debug_log.error("No valid MCP server scripts found")
                 return False
