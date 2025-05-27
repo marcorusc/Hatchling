@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 license = {file = "LICENSE"}
 authors = [
-    {name = "Hatchling Developers"}
+    {name = "Hatch! Team"}
 ]
 classifiers = [
     "Programming Language :: Python :: 3.12",
@@ -35,16 +35,11 @@ dependencies = [
 [project.scripts]
 hatchling = "hatchling.app:main"
 
-[tool.setuptools]
-packages = ["hatchling"]
-include-package-data = true
-package-dir = {hatchling = "hatchling"}
+[tool.setuptools.packages.find]
+where = ["."]
 
 [tool.setuptools.dynamic]
 version = {file = "VERSION"}
-
-[tool.setuptools.package-data]
-hatchling = ["py.typed"]
 
 [project.urls]
 "Repository" = "https://github.com/CrackingShells/Hatchling"
