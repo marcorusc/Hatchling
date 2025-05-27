@@ -90,13 +90,13 @@ class CLIChat:
         """
         try:
             # Check if model is available
-            is_model_available = await self.model_manager.check_availability(session, self.settings.default_model)
+            is_model_available = await self.model_manager.check_availability(session, self.settings.ollama_model)
             
             if is_model_available:
-                self.debug_log.info(f"Model {self.settings.default_model} is already pulled.")
+                self.debug_log.info(f"Model {self.settings.ollama_model} is already pulled.")
                 return True
             else:
-                await self.model_manager.pull_model(session, self.settings.default_model)
+                await self.model_manager.pull_model(session, self.settings.ollama_model)
                 return True
         except Exception as e:
             self.debug_log.error(f"Error checking/pulling model: {e}")
@@ -108,7 +108,7 @@ class CLIChat:
             self.debug_log.error("Chat session not initialized. Call initialize() first.")
             return
         
-        self.debug_log.info(f"Starting interactive chat with {self.settings.default_model}")
+        self.debug_log.info(f"Starting interactive chat with {self.settings.ollama_model}")
         self.cmd_handler.print_commands_help()
         
         async with aiohttp.ClientSession() as session:

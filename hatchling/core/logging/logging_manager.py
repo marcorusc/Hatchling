@@ -53,14 +53,10 @@ class LoggingManager:
         self.log_level = log_levels.get(log_level_str, logging.INFO)
         
         # Get log file path from environment
-        self.log_file = os.environ.get('LOG_FILE')
-        
-        # Create directory for log file if needed
-        if self.log_file:
-            log_path = Path(self.log_file)
-            if log_path.parent.name:  # If there's a parent directory
-                log_path.parent.mkdir(exist_ok=True, parents=True)
-    
+        log_dir = Path(os.environ.get('LOG_DIR', Path.home() / '.hatch' / 'logs'))
+        log_dir.mkdir(exist_ok=True, parents=True)
+        self.log_file = log_dir / 'hatchling.log'
+
     def configure_root_logger(self):
         """Configure the root logger with CLI handler and file handler if configured."""
         # Get the root logger
@@ -80,7 +76,7 @@ class LoggingManager:
             try:
                 # Use rotating file handler to prevent huge log files
                 file_handler = RotatingFileHandler(
-                    self.log_file, 
+                    str(self.log_file), 
                     maxBytes=10*1024*1024,  # 10 MB
                     backupCount=5
                 )

@@ -18,7 +18,7 @@ class ChatSession:
             settings (ChatSettings): Configuration settings for the chat session.
         """
         self.settings = settings
-        self.model_name = settings.default_model
+        self.model_name = settings.ollama_model
         # Get session-specific logger from the manager
         self.debug_log = logging_manager.get_session(f"ChatSession-{self.model_name}",
                                   formatter=logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))

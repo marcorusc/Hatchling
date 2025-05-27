@@ -17,7 +17,7 @@ class ToolExecutionManager:
             settings (ChatSettings): The application settings.
         """
         self.settings = settings
-        self.debug_log = logging_manager.get_session(f"ToolExecutionManager-{settings.default_model}",
+        self.debug_log = logging_manager.get_session(f"ToolExecutionManager-{settings.ollama_model}",
                                       formatter=logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
         self.tools_enabled = False
         

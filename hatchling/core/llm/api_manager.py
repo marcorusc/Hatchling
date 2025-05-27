@@ -16,9 +16,9 @@ class APIManager:
             settings: The application settings
         """
         self.settings = settings
-        self.debug_log = logging_manager.get_session(f"APIManager-{settings.default_model}",
+        self.debug_log = logging_manager.get_session(f"APIManager-{settings.ollama_model}",
                                       formatter=logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
-        self.model_name = settings.default_model
+        self.model_name = settings.ollama_model
     
     def prepare_request_payload(self, messages: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Prepare the request payload for the LLM API.
