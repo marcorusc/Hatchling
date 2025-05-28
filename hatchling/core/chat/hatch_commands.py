@@ -60,6 +60,17 @@ class HatchCommands:
         # No async commands for now, but could be added if needed
         self.async_commands = {}
     
+    def print_commands_help(self) -> None:
+        """Print help for all available chat commands."""
+        print("\n=== Hatch Chat Commands ===")
+
+        # Combine all commands for display
+        all_commands = {**self.sync_commands, **self.async_commands}
+
+        # Group commands by functionality and print them
+        for cmd_name, (_, description) in sorted(all_commands.items()):
+            print(f"Type '{cmd_name}' - {description}")
+
     def _print_command_help(self, command: str) -> None:
         """Print help for a specific command.
         
@@ -68,6 +79,9 @@ class HatchCommands:
         """
         if command in self.sync_commands:
             _, description = self.sync_commands[command]
+            print(f"{command}: {description}")
+        elif command in self.async_commands:
+            _, description = self.async_commands[command]
             print(f"{command}: {description}")
         else:
             print(f"No help available for command: {command}")

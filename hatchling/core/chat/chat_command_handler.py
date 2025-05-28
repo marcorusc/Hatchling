@@ -51,15 +51,8 @@ class ChatCommandHandler:
         print("Type 'help' for this help message")
         print()
         
-        # Combine all commands for display
-        all_commands = {**self.sync_commands, **self.async_commands}
-        
-        # Group commands by functionality and print them
-        for cmd_name, (_, description) in sorted(all_commands.items()):
-            # Skip duplicates like 'quit' which is same as 'exit'
-            if cmd_name in ['quit']:
-                continue
-            print(f"Type '{cmd_name}' - {description}")
+        self.base_commands.print_commands_help()
+        self.hatch_commands.print_commands_help()
             
         print("======================\n")
     
@@ -84,6 +77,10 @@ class ChatCommandHandler:
         parts = user_input.split(' ', 1)
         command = parts[0].lower()
         args = parts[1] if len(parts) > 1 else ""
+
+        if command == "help":
+            self.print_commands_help()
+            return True, True
         
         # Check if the input is a registered command
         if command in self.sync_commands:

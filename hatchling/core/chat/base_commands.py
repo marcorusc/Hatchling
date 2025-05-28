@@ -55,18 +55,24 @@ class BaseChatCommands:
             'enable_tools': (self._cmd_enable_tools, "Enable MCP tools"),
             'disable_tools': (self._cmd_disable_tools, "Disable MCP tools"),
         }
-    
+
+    def print_commands_help(self) -> None:
+        """Print help for all available chat commands."""
+        print("\n=== Base Chat Commands ===")
+
+        # Combine all commands for display
+        all_commands = {**self.sync_commands, **self.async_commands}
+
+        # Group commands by functionality and print them
+        for cmd_name, (_, description) in sorted(all_commands.items()):
+            print(f"Type '{cmd_name}' - {description}")
+
     def _cmd_help(self, _: str) -> bool:
-        """Display help information.
-        
-        Args:
-            _ (str): Unused arguments.
-            
-        Returns:
-            bool: True to continue the chat session.
         """
-        self.print_commands_help()
-        return True
+        This is the only command that is picked up by the ChatCommandHandler
+        and not here.
+        """
+        pass
     
     def _cmd_exit(self, _: str) -> bool:
         """Exit the chat session.
