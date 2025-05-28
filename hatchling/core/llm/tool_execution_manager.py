@@ -1,11 +1,17 @@
+"""Tool execution management for LLM interactions.
+
+This module provides functionality for handling tool execution requests from LLMs,
+managing tool calling chains, and processing tool results.
+"""
+
 import json
 import logging
 import time
 from typing import List, Dict, Tuple, Any, Optional
 
-from mcp_utils.manager import mcp_manager
-from core.logging.logging_manager import logging_manager
-from config.settings import ChatSettings
+from hatchling.mcp_utils.manager import mcp_manager
+from hatchling.core.logging.logging_manager import logging_manager
+from hatchling.config.settings import ChatSettings
 
 class ToolExecutionManager:
     """Manages tool execution and tool calling chains."""
@@ -17,7 +23,7 @@ class ToolExecutionManager:
             settings (ChatSettings): The application settings.
         """
         self.settings = settings
-        self.debug_log = logging_manager.get_session(f"ToolExecutionManager-{settings.default_model}",
+        self.debug_log = logging_manager.get_session(f"ToolExecutionManager-{settings.ollama_model}",
                                       formatter=logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
         self.tools_enabled = False
         
@@ -72,7 +78,7 @@ class ToolExecutionManager:
             arguments (Dict[str, Any]): The arguments to pass to the function.
             
         Returns:
-            Optional[Dict[str, Any]]: The tool result, or None if execution failed.
+            Optional[Dict[str, Any]]: The tool result dictionary, or None if execution failed.
         """
         try:
             # Increment the tool call iteration counter each time a tool is executed
@@ -126,7 +132,7 @@ class ToolExecutionManager:
             tool_id (str): The ID of the tool call.
             
         Returns:
-            Optional[Dict[str, Any]]: The tool result, or None if processing failed.
+            Optional[Dict[str, Any]]: The tool result dictionary, or None if processing failed.
         """
         function_name = tool_call["function"]["name"]
         arguments = tool_call["function"]["arguments"]
@@ -197,8 +203,10 @@ class ToolExecutionManager:
             tool_results (List[Dict[str, Any]]): List of tool execution results.
                         
         Returns:
-            Tuple[str, List[Dict[str, Any]], List[Dict[str, Any]]]: Tuple containing 
-            (full_response, message_tool_calls, tool_results).
+            Tuple[str, List[Dict[str, Any]], List[Dict[str, Any]]]: A tuple containing:
+                - str: The full response text
+                - List[Dict[str, Any]]: The message tool calls
+                - List[Dict[str, Any]]: The tool execution results
         """
         _full_response, _message_tool_calls, _tool_results = full_response, message_tool_calls, tool_results
         

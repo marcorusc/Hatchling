@@ -2,9 +2,9 @@ import json
 from typing import List, Dict, Tuple, Any
 import logging
 import aiohttp
-from core.logging.logging_manager import logging_manager
-from config.settings import ChatSettings
-from core.chat.message_history import MessageHistory
+from hatchling.core.logging.logging_manager import logging_manager
+from hatchling.config.settings import ChatSettings
+from hatchling.core.chat.message_history import MessageHistory
 
 class APIManager:
     """Manages API communication with the LLM."""
@@ -16,9 +16,9 @@ class APIManager:
             settings: The application settings
         """
         self.settings = settings
-        self.debug_log = logging_manager.get_session(f"APIManager-{settings.default_model}",
+        self.debug_log = logging_manager.get_session(f"APIManager-{settings.ollama_model}",
                                       formatter=logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
-        self.model_name = settings.default_model
+        self.model_name = settings.ollama_model
     
     def prepare_request_payload(self, messages: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Prepare the request payload for the LLM API.
@@ -85,12 +85,14 @@ class APIManager:
         """Process response data and extract content and tool calls.
         
         Args:
-            data: The response data to process from the LLM.
-            message_tool_calls: List of processed tool calls.
-            tool_executor: The tool execution manager to handle tool calls
+            data (Dict[str, Any]): The response data to process from the LLM.
+            message_tool_calls (List): List of processed tool calls.
+            tool_executor: The tool execution manager to handle tool calls.
             
         Returns:
-            Tuple containing the content and tool results.
+            Tuple[str, List]: A tuple containing:
+                - str: The extracted content from the response
+                - List: The collected tool results
         """
         content = ""
         tool_results = []

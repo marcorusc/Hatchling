@@ -1,3 +1,9 @@
+"""Session-specific debugging logs with in-memory storage.
+
+This module provides a specialized logger that both writes to standard logging
+outputs and stores logs in memory for easy retrieval during a session.
+"""
+
 import logging
 import io
 from datetime import datetime
@@ -12,7 +18,7 @@ class SessionDebugLog:
         
         Args:
             name (str, optional): Name of the logger. Defaults to "SessionDebugLog".
-            formatter (logging.Formatter, optional): Custom formatter for log messages. 
+            formatter (logging.Formatter, optional): Custom formatter for log messages. Defaults to None.
         """
         # Create a unique logger for this session
         self.logger = logging.getLogger(name)
@@ -80,7 +86,7 @@ class SessionDebugLog:
         """Get formatted log entries, optionally limited to the last N entries.
         
         Args:
-            last_n (int, optional): If provided, only return the last N log entries.
+            last_n (int, optional): If provided, only return the last N log entries. Defaults to None.
             
         Returns:
             str: A formatted string with the log entries.

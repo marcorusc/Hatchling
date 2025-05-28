@@ -1,26 +1,37 @@
+"""Base chat commands module for handling core chat interface commands.
+
+Contains the BaseChatCommands class which provides basic command handling functionality
+for the chat interface, including help, exit, log control and tool management.
+"""
+
 import logging
 from typing import Tuple
 
-from core.logging.session_debug_log import SessionDebugLog
-from core.logging.logging_manager import logging_manager
-from mcp_utils.manager import mcp_manager
-from config.settings import ChatSettings
+from hatchling.core.logging.session_debug_log import SessionDebugLog
+from hatchling.core.logging.logging_manager import logging_manager
+from hatchling.mcp_utils.manager import mcp_manager
+from hatchling.config.settings import ChatSettings
+
+from hatch import HatchEnvironmentManager
 
 
-class ChatCommandHandler:
+class BaseChatCommands:
     """Handles processing of command inputs in the chat interface."""
 
-    def __init__(self, chat_session, settings: ChatSettings, debug_log: SessionDebugLog):
+    def __init__(self, chat_session, settings: ChatSettings, env_manager: HatchEnvironmentManager, debug_log: SessionDebugLog):
         """Initialize the command handler.
         
         Args:
             chat_session: The chat session this handler is associated with.
             settings (ChatSettings): The chat settings to use.
+            env_manager (HatchEnvironmentManager): The Hatch environment manager.
             debug_log (SessionDebugLog): Logger for command operations.
         """
         self.chat_session = chat_session
         self.settings = settings
+        self.env_manager = env_manager
         self.debug_log = debug_log
+
         self._register_commands()
         
     def _register_commands(self) -> None:
@@ -44,57 +55,6 @@ class ChatCommandHandler:
             'enable_tools': (self._cmd_enable_tools, "Enable MCP tools"),
             'disable_tools': (self._cmd_disable_tools, "Disable MCP tools"),
         }
-        
-    def print_commands_help(self) -> None:
-        """Print help for all available chat commands."""
-        print("\n=== Chat Commands ===")
-        print("Type 'help' for this help message")
-        print()
-        
-        # Combine all commands for display
-        all_commands = {**self.sync_commands, **self.async_commands}
-        
-        # Group commands by functionality and print them
-        for cmd_name, (_, description) in sorted(all_commands.items()):
-            # Skip duplicates like 'quit' which is same as 'exit'
-            if cmd_name in ['quit']:
-                continue
-            print(f"Type '{cmd_name}' - {description}")
-            
-        print("======================\n")
-    
-    async def process_command(self, user_input: str) -> Tuple[bool, bool]:
-        """Process a potential command from user input.
-        
-        Args:
-            user_input (str): The user's input text.
-            
-        Returns:
-            Tuple[bool, bool]: (is_command, should_continue)
-              - is_command: True if input was a command
-              - should_continue: False if chat session should end
-        """
-        user_input = user_input.strip()
-        
-        # Handle empty input
-        if not user_input:
-            return True, True
-            
-        # Extract command and arguments
-        parts = user_input.split(' ', 1)
-        command = parts[0].lower()
-        args = parts[1] if len(parts) > 1 else ""
-        
-        # Check if the input is a registered command
-        if command in self.sync_commands:
-            handler_func, _ = self.sync_commands[command]
-            return True, handler_func(args)
-        elif command in self.async_commands:
-            async_handler_func, _ = self.async_commands[command]
-            return True, await async_handler_func(args)
-            
-        # Not a command
-        return False, True
     
     def _cmd_help(self, _: str) -> bool:
         """Display help information.
@@ -187,13 +147,29 @@ class ChatCommandHandler:
         Returns:
             bool: True to continue the chat session.
         """
-        connected = await self.chat_session.initialize_mcp(self.settings.mcp_server_urls)
-        if not connected:
-            self.debug_log.error("Failed to connect to MCP servers. Tools not enabled.")
+
+        # If tools are already enabled, do nothing
+        if self.chat_session.tool_executor.tools_enabled:
+            self.debug_log.warning("MCP tools are already enabled.")
+            return True
+
+        # Get the name of the current environment
+        name = self.env_manager.get_current_environment()
+
+        # Retrieve the new environment's entry points for the MCP servers
+        mcp_servers_url = self.env_manager.get_servers_entry_points(name)
+        if mcp_servers_url:
+            # Reconnect to the new environment's tools
+            connected = await self.chat_session.initialize_mcp(mcp_servers_url)
+            if not connected:
+                self.debug_log.error("Failed to connect to new environment's MCP servers. Tools not enabled.")
+            else:
+                self.debug_log.info("Connected to new environment's MCP servers successfully!")
         else:
-            self.debug_log.info("MCP tools enabled successfully!")
+            self.debug_log.error("No MCP servers found for the current environment. Tools cannot be enabled.")
+            return False
         return True
-    
+
     async def _cmd_disable_tools(self, _: str) -> bool:
         """Disable MCP tools.
         

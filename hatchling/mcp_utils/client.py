@@ -7,7 +7,7 @@ from contextlib import AsyncExitStack
 
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
-from core.logging.logging_manager import logging_manager
+from hatchling.core.logging.logging_manager import logging_manager
 
 
 class MCPClient:

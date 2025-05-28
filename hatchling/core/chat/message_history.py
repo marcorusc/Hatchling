@@ -1,5 +1,11 @@
+"""Message history management module for chat interfaces.
+
+Provides functionality for tracking, storing, and managing chat message history
+including user messages, assistant responses, and tool interactions.
+"""
+
 from typing import List, Dict, Any, Optional
-from core.logging.session_debug_log import SessionDebugLog
+from hatchling.core.logging.session_debug_log import SessionDebugLog
 
 class MessageHistory:
     """Simple manager for chat message history without any complex optimizations."""
