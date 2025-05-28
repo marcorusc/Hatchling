@@ -46,7 +46,7 @@ class HatchCommands:
             'hatch:env:current': (self._cmd_env_current, "Show the current Hatch environment"),
             'hatch:env:use': (self._cmd_env_use, "Set the current Hatch environment. Usage: hatch:env:use <name>"),
             # Package commands
-            'hatch:pkg:add': (self._cmd_pkg_add, "Add a package to an environment. Usage: hatch:pkg:add <package_path_or_name> [--env <env_name>] [--version <version>]"),
+            'hatch:pkg:add': (self._cmd_pkg_add, "Add a package to an environment. Usage: hatch:pkg:add <package_path_or_name> [--env <env_name>] [--version <version>] [--force-download] [--refresh-registry]"),
             'hatch:pkg:remove': (self._cmd_pkg_remove, "Remove a package from an environment. Usage: hatch:pkg:remove <package_name> [--env <env_name>]"),
             'hatch:pkg:list': (self._cmd_pkg_list, "List packages in an environment. Usage: hatch:pkg:list [--env <env_name>]"),
 
@@ -345,7 +345,9 @@ class HatchCommands:
         arg_defs = {
             'package_path_or_name': {'positional': True},
             'env': {'aliases': ['e'], 'default': None},
-            'version': {'aliases': ['v'], 'default': None}
+            'version': {'aliases': ['v'], 'default': None},
+            'force-download': {'aliases': ['f'], 'default': False, 'action': 'store_true'},
+            'refresh-registry': {'aliases': ['r'], 'default': False, 'action': 'store_true'}
         }
         
         parsed_args = self._parse_args(args, arg_defs)
@@ -358,8 +360,10 @@ class HatchCommands:
             package = parsed_args['package_path_or_name']
             env = parsed_args.get('env')
             version = parsed_args.get('version')
+            force_download = parsed_args.get('force-download', False)
+            refresh_registry = parsed_args.get('refresh-registry', False)
 
-            if self.env_manager.add_package_to_environment(package, env, version):
+            if self.env_manager.add_package_to_environment(package, env, version, force_download, refresh_registry):
                 self.debug_log.info(f"Successfully added package: {package}")
             else:
                 self.debug_log.error(f"Failed to add package: {package}")
