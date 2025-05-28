@@ -1,6 +1,7 @@
 import os
 import logging
-from core.logging.logging_manager import logging_manager
+from pathlib import Path
+from hatchling.core.logging.logging_manager import logging_manager
 
 logger = logging_manager.get_session("Chat Settings", logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
 
@@ -9,27 +10,34 @@ class ChatSettings:
     
     def __init__(self, 
                  ollama_api_url: str = os.environ.get("OLLAMA_HOST_API", "http://localhost:11434/api"),
-                 default_model: str = os.environ.get("DEFAULT_MODEL", "mistral-small3.1"),
-                 mcp_server_urls: list = None,
+                 ollama_model: str = os.environ.get("OLLAMA_MODEL", "mistral-small3.1"),
+                 hatch_envs_dir: str = os.environ.get("HATCH_ENVS_DIR", Path.home() / ".hatch" / "envs"),
                  max_tool_call_iteration: int = 5,
                  max_working_time: float = 30.0):
         """Initialize chat settings with configurable parameters.
         
         Args:
             ollama_api_url (str, optional): URL for the Ollama API. Defaults to environment variable or localhost.
-            default_model (str, optional): Default LLM model to use. Defaults to environment variable or mistral-small3.1.
-            mcp_server_urls (list, optional): List of MCP server URLs. Defaults to empty list.
+            ollama_model (str, optional): Ollama LLM to use. Defaults to environment variable or mistral-small3.1.
+            hatch_envs_dir (str, optional): Directory for Hatch environments. Defaults to environment variable or ~/.hatch/envs.
             max_tool_call_iteration (int, optional): Maximum number of tool call iterations. Defaults to 5.
             max_working_time (float, optional): Maximum time in seconds for tool operations. Defaults to 30.0.
         """
         self.ollama_api_url = ollama_api_url
-        self.default_model = default_model
-        self.mcp_server_urls = mcp_server_urls or []
+        self.ollama_model = ollama_model
+
+        # If hatch_envs_dir is:
+        # - an absolute path, it is used as is
+        # - a relative path, it is resolved against the user's home directory
+        if os.path.isabs(hatch_envs_dir):
+            self.hatch_envs_dir = hatch_envs_dir
+        else:
+            self.hatch_envs_dir = Path.home() / hatch_envs_dir
         
         # New settings for tool calling control
         self.max_tool_call_iteration = max_tool_call_iteration  # Maximum number of tool call iterations
         self.max_working_time = max_working_time  # Maximum time in seconds for tool operations
 
-        logger.info(f"ChatSettings initialized with model: {self.default_model}, API URL: {self.ollama_api_url}")
+        logger.info(f"ChatSettings initialized with model: {self.ollama_model}, API URL: {self.ollama_api_url}")
         logger.info(f"Max tool call iterations: {self.max_tool_call_iteration}, Max working time: {self.max_working_time} seconds")
-        logger.info(f"MCP server URLs: {self.mcp_server_urls}")
+        logger.info(f"Hatch environments directory: {self.hatch_envs_dir}")

@@ -5,14 +5,11 @@ services:
       context: ..
       dockerfile: ./docker/Dockerfile
     volumes:
-      - ../:/app
-      - hatchling_logs:/app/__logs__
+      - ${HATCH_HOST_CACHE_DIR}:/home/appuser/.hatch
+      - ${HATCH_LOCAL_PACKAGE_DIR}:/app/.local
     env_file: .env
     environment:
       - PYTHONPATH=/app
     network_mode: ${NETWORK_MODE}
     tty: true
     stdin_open: true
-
-volumes:
-  hatchling_logs:

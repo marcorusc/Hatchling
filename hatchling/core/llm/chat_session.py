@@ -2,13 +2,13 @@ import aiohttp
 import logging
 from typing import List, Dict, Tuple, Any, Optional
 
-from core.logging.session_debug_log import SessionDebugLog
-from mcp_utils.manager import mcp_manager
-from core.logging.logging_manager import logging_manager
-from config.settings import ChatSettings
-from core.chat.message_history import MessageHistory
-from core.llm.tool_execution_manager import ToolExecutionManager
-from core.llm.api_manager import APIManager
+from hatchling.core.logging.session_debug_log import SessionDebugLog
+from hatchling.mcp_utils.manager import mcp_manager
+from hatchling.core.logging.logging_manager import logging_manager
+from hatchling.config.settings import ChatSettings
+from hatchling.core.chat.message_history import MessageHistory
+from hatchling.core.llm.tool_execution_manager import ToolExecutionManager
+from hatchling.core.llm.api_manager import APIManager
 
 class ChatSession:
     def __init__(self, settings: ChatSettings):
@@ -18,7 +18,7 @@ class ChatSession:
             settings (ChatSettings): Configuration settings for the chat session.
         """
         self.settings = settings
-        self.model_name = settings.default_model
+        self.model_name = settings.ollama_model
         # Get session-specific logger from the manager
         self.debug_log = logging_manager.get_session(f"ChatSession-{self.model_name}",
                                   formatter=logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
@@ -43,11 +43,11 @@ class ChatSession:
         """Send the current message history to the Ollama API and stream the response.
         
         Args:
-            user_message (str): The user's message.
+            user_message (str): The user's message to process.
             session (aiohttp.ClientSession): The session to use for the request.
             
         Returns:
-            str: The assistant's response.
+            str: The assistant's response text.
         """
         # Add user message
         self.history.add_user_message(user_message)
@@ -90,13 +90,13 @@ class ChatSession:
         
         Args:
             session (aiohttp.ClientSession): The http session to use for the request.
-            message_tool_calls (List[Dict[str, Any]], optional): The tool calls to format.
-            tool_results (List[Dict[str, Any]], optional): The tool results to format.
-            is_final (bool): Whether this is the final response (True) or partial (False).
-            limit_reason (str, optional): If partial, the reason for stopping (max iterations or time limit).
+            message_tool_calls (List[Dict[str, Any]], optional): The tool calls to format. Defaults to None.
+            tool_results (List[Dict[str, Any]], optional): The tool results to format. Defaults to None.
+            is_final (bool, optional): Whether this is the final response (True) or partial (False). Defaults to True.
+            limit_reason (str, optional): If partial, the reason for stopping (max iterations or time limit). Defaults to None.
             
         Returns:
-            str: The formatted response.
+            str: The formatted response text.
         """
         try:
             response_type = "final" if is_final else "partial"

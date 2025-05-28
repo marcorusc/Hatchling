@@ -1,10 +1,16 @@
+"""Logging management for the Hatchling application.
+
+This module provides centralized logging configuration, management of logging sessions,
+and consistent logging across the application.
+"""
+
 import logging
 import io
 import os
 from pathlib import Path
 from typing import Dict, Optional, List, Union
 from logging.handlers import RotatingFileHandler
-from core.logging.session_debug_log import SessionDebugLog
+from hatchling.core.logging.session_debug_log import SessionDebugLog
 
 
 class LoggingManager:
@@ -13,7 +19,11 @@ class LoggingManager:
     _instance = None
     
     def __new__(cls):
-        """Ensure singleton pattern implementation."""
+        """Ensure singleton pattern implementation.
+        
+        Returns:
+            LoggingManager: The singleton instance of LoggingManager.
+        """
         if cls._instance is None:
             cls._instance = super(LoggingManager, cls).__new__(cls)
             cls._instance._initialized = False
@@ -53,14 +63,10 @@ class LoggingManager:
         self.log_level = log_levels.get(log_level_str, logging.INFO)
         
         # Get log file path from environment
-        self.log_file = os.environ.get('LOG_FILE')
-        
-        # Create directory for log file if needed
-        if self.log_file:
-            log_path = Path(self.log_file)
-            if log_path.parent.name:  # If there's a parent directory
-                log_path.parent.mkdir(exist_ok=True, parents=True)
-    
+        log_dir = Path(os.environ.get('LOG_DIR', Path.home() / '.hatch' / 'logs'))
+        log_dir.mkdir(exist_ok=True, parents=True)
+        self.log_file = log_dir / 'hatchling.log'
+
     def configure_root_logger(self):
         """Configure the root logger with CLI handler and file handler if configured."""
         # Get the root logger
@@ -80,7 +86,7 @@ class LoggingManager:
             try:
                 # Use rotating file handler to prevent huge log files
                 file_handler = RotatingFileHandler(
-                    self.log_file, 
+                    str(self.log_file), 
                     maxBytes=10*1024*1024,  # 10 MB
                     backupCount=5
                 )
@@ -116,10 +122,10 @@ class LoggingManager:
         
         Args:
             name (str): The name of the session debug log.
-            formatter (logging.Formatter, optional): Custom formatter for this session.
+            formatter (logging.Formatter, optional): Custom formatter for this session. Defaults to None.
             
         Returns:
-            SessionDebugLog: The session debug log.
+            SessionDebugLog: The session debug log instance.
         """
         if name not in self.sessions:
             # Create a new session if it doesn't exist
@@ -164,7 +170,7 @@ class LoggingManager:
         """Create a console handler with the current CLI log level.
         
         Args:
-            formatter (Optional[logging.Formatter], optional): Formatter to use, falls back to default formatter.
+            formatter (logging.Formatter, optional): Formatter to use, falls back to default formatter. Defaults to None.
             
         Returns:
             logging.StreamHandler: A configured console handler.

@@ -3,12 +3,14 @@ import aiohttp
 import logging
 from typing import Optional
 
-from core.logging.logging_manager import logging_manager
-from config.settings import ChatSettings
-from core.llm.model_manager import ModelManager
-from core.llm.chat_session import ChatSession
-from core.chat.chat_command_handler import ChatCommandHandler
-from mcp_utils.manager import mcp_manager
+from hatchling.core.logging.logging_manager import logging_manager
+from hatchling.core.llm.model_manager import ModelManager
+from hatchling.core.llm.chat_session import ChatSession
+from hatchling.core.chat.chat_command_handler import ChatCommandHandler
+from hatchling.config.settings import ChatSettings
+from hatchling.mcp_utils.manager import mcp_manager
+
+from hatch import HatchEnvironmentManager
 
 class CLIChat:
     """Command-line interface for chat functionality."""
@@ -18,9 +20,13 @@ class CLIChat:
         
         Args:
             settings (ChatSettings): The chat settings to use.
-            debug_log (Optional[SessionDebugLog]): Logger for debugging information. Defaults to None.
         """
         self.settings = settings
+        
+        self.env_manager = HatchEnvironmentManager(
+            environments_dir = self.settings.hatch_envs_dir,
+            cache_ttl = 86400,  # 1 day default
+        )
         
         # Create a debug log if not provided
         self.debug_log = logging_manager.get_session("CLIChat",
@@ -50,8 +56,12 @@ class CLIChat:
         
         # Check if MCP server is available
         self.debug_log.info("Checking MCP server availability...")
-        mcp_available = await mcp_manager.initialize(self.settings.mcp_server_urls)
-        
+        # Get the name of the current environment
+        name = self.env_manager.get_current_environment()
+        # Retrieve the environment's entry points for the MCP servers
+        mcp_servers_url = self.env_manager.get_servers_entry_points(name)
+        mcp_available = await mcp_manager.initialize(mcp_servers_url)
+
         if mcp_available:
             self.debug_log.info("MCP server is available! Tool calling is ready to use.")
             self.debug_log.info("You can enable tools during the chat session by typing 'enable_tools'")
@@ -64,7 +74,7 @@ class CLIChat:
         self.chat_session = ChatSession(self.settings)
         
         # Initialize command handler
-        self.cmd_handler = ChatCommandHandler(self.chat_session, self.settings, self.debug_log)
+        self.cmd_handler = ChatCommandHandler(self.chat_session, self.settings, self.env_manager, self.debug_log)
         
         return True
     
@@ -79,13 +89,13 @@ class CLIChat:
         """
         try:
             # Check if model is available
-            is_model_available = await self.model_manager.check_availability(session, self.settings.default_model)
+            is_model_available = await self.model_manager.check_availability(session, self.settings.ollama_model)
             
             if is_model_available:
-                self.debug_log.info(f"Model {self.settings.default_model} is already pulled.")
+                self.debug_log.info(f"Model {self.settings.ollama_model} is already pulled.")
                 return True
             else:
-                await self.model_manager.pull_model(session, self.settings.default_model)
+                await self.model_manager.pull_model(session, self.settings.ollama_model)
                 return True
         except Exception as e:
             self.debug_log.error(f"Error checking/pulling model: {e}")
@@ -97,7 +107,7 @@ class CLIChat:
             self.debug_log.error("Chat session not initialized. Call initialize() first.")
             return
         
-        self.debug_log.info(f"Starting interactive chat with {self.settings.default_model}")
+        self.debug_log.info(f"Starting interactive chat with {self.settings.ollama_model}")
         self.cmd_handler.print_commands_help()
         
         async with aiohttp.ClientSession() as session:
