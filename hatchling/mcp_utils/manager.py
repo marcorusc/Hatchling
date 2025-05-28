@@ -14,7 +14,11 @@ class MCPManager:
     _instance = None
     
     def __new__(cls):
-        """Ensure singleton pattern implementation."""
+        """Ensure singleton pattern implementation.
+        
+        Returns:
+            MCPManager: The singleton instance of the MCPManager.
+        """
         if cls._instance is None:
             cls._instance = super(MCPManager, cls).__new__(cls)
             cls._instance._initialized = False
@@ -265,7 +269,7 @@ class MCPManager:
         """Get citations for all servers used in the current session.
 
         Returns:
-            response (Dict[str, Dict[str, str]]]: Dictionary of citations for each server.
+            Dict[str, Dict[str, str]]: Dictionary of citations for each server.
         """
         citations = {}
         

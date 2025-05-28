@@ -85,12 +85,14 @@ class APIManager:
         """Process response data and extract content and tool calls.
         
         Args:
-            data: The response data to process from the LLM.
-            message_tool_calls: List of processed tool calls.
-            tool_executor: The tool execution manager to handle tool calls
+            data (Dict[str, Any]): The response data to process from the LLM.
+            message_tool_calls (List): List of processed tool calls.
+            tool_executor: The tool execution manager to handle tool calls.
             
         Returns:
-            Tuple containing the content and tool results.
+            Tuple[str, List]: A tuple containing:
+                - str: The extracted content from the response
+                - List: The collected tool results
         """
         content = ""
         tool_results = []

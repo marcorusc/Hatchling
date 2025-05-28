@@ -1,3 +1,9 @@
+"""Tool execution management for LLM interactions.
+
+This module provides functionality for handling tool execution requests from LLMs,
+managing tool calling chains, and processing tool results.
+"""
+
 import json
 import logging
 import time
@@ -72,7 +78,7 @@ class ToolExecutionManager:
             arguments (Dict[str, Any]): The arguments to pass to the function.
             
         Returns:
-            Optional[Dict[str, Any]]: The tool result, or None if execution failed.
+            Optional[Dict[str, Any]]: The tool result dictionary, or None if execution failed.
         """
         try:
             # Increment the tool call iteration counter each time a tool is executed
@@ -126,7 +132,7 @@ class ToolExecutionManager:
             tool_id (str): The ID of the tool call.
             
         Returns:
-            Optional[Dict[str, Any]]: The tool result, or None if processing failed.
+            Optional[Dict[str, Any]]: The tool result dictionary, or None if processing failed.
         """
         function_name = tool_call["function"]["name"]
         arguments = tool_call["function"]["arguments"]
@@ -197,8 +203,10 @@ class ToolExecutionManager:
             tool_results (List[Dict[str, Any]]): List of tool execution results.
                         
         Returns:
-            Tuple[str, List[Dict[str, Any]], List[Dict[str, Any]]]: Tuple containing 
-            (full_response, message_tool_calls, tool_results).
+            Tuple[str, List[Dict[str, Any]], List[Dict[str, Any]]]: A tuple containing:
+                - str: The full response text
+                - List[Dict[str, Any]]: The message tool calls
+                - List[Dict[str, Any]]: The tool execution results
         """
         _full_response, _message_tool_calls, _tool_results = full_response, message_tool_calls, tool_results
         

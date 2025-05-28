@@ -43,11 +43,11 @@ class ChatSession:
         """Send the current message history to the Ollama API and stream the response.
         
         Args:
-            user_message (str): The user's message.
+            user_message (str): The user's message to process.
             session (aiohttp.ClientSession): The session to use for the request.
             
         Returns:
-            str: The assistant's response.
+            str: The assistant's response text.
         """
         # Add user message
         self.history.add_user_message(user_message)
@@ -90,13 +90,13 @@ class ChatSession:
         
         Args:
             session (aiohttp.ClientSession): The http session to use for the request.
-            message_tool_calls (List[Dict[str, Any]], optional): The tool calls to format.
-            tool_results (List[Dict[str, Any]], optional): The tool results to format.
-            is_final (bool): Whether this is the final response (True) or partial (False).
-            limit_reason (str, optional): If partial, the reason for stopping (max iterations or time limit).
+            message_tool_calls (List[Dict[str, Any]], optional): The tool calls to format. Defaults to None.
+            tool_results (List[Dict[str, Any]], optional): The tool results to format. Defaults to None.
+            is_final (bool, optional): Whether this is the final response (True) or partial (False). Defaults to True.
+            limit_reason (str, optional): If partial, the reason for stopping (max iterations or time limit). Defaults to None.
             
         Returns:
-            str: The formatted response.
+            str: The formatted response text.
         """
         try:
             response_type = "final" if is_final else "partial"

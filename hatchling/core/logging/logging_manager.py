@@ -1,3 +1,9 @@
+"""Logging management for the Hatchling application.
+
+This module provides centralized logging configuration, management of logging sessions,
+and consistent logging across the application.
+"""
+
 import logging
 import io
 import os
@@ -13,7 +19,11 @@ class LoggingManager:
     _instance = None
     
     def __new__(cls):
-        """Ensure singleton pattern implementation."""
+        """Ensure singleton pattern implementation.
+        
+        Returns:
+            LoggingManager: The singleton instance of LoggingManager.
+        """
         if cls._instance is None:
             cls._instance = super(LoggingManager, cls).__new__(cls)
             cls._instance._initialized = False
@@ -112,10 +122,10 @@ class LoggingManager:
         
         Args:
             name (str): The name of the session debug log.
-            formatter (logging.Formatter, optional): Custom formatter for this session.
+            formatter (logging.Formatter, optional): Custom formatter for this session. Defaults to None.
             
         Returns:
-            SessionDebugLog: The session debug log.
+            SessionDebugLog: The session debug log instance.
         """
         if name not in self.sessions:
             # Create a new session if it doesn't exist
@@ -160,7 +170,7 @@ class LoggingManager:
         """Create a console handler with the current CLI log level.
         
         Args:
-            formatter (Optional[logging.Formatter], optional): Formatter to use, falls back to default formatter.
+            formatter (logging.Formatter, optional): Formatter to use, falls back to default formatter. Defaults to None.
             
         Returns:
             logging.StreamHandler: A configured console handler.

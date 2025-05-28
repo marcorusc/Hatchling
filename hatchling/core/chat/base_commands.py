@@ -1,3 +1,9 @@
+"""Base chat commands module for handling core chat interface commands.
+
+Contains the BaseChatCommands class which provides basic command handling functionality
+for the chat interface, including help, exit, log control and tool management.
+"""
+
 import logging
 from typing import Tuple
 

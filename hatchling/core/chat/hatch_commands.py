@@ -1,3 +1,9 @@
+"""Hatch package manager commands module for the chat interface.
+
+This module provides commands for interacting with the Hatch package manager,
+including environment management, package operations, and template creation.
+"""
+
 import logging
 from typing import Tuple, Dict, Any, List, Optional
 from pathlib import Path

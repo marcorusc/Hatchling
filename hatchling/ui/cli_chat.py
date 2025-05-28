@@ -20,7 +20,6 @@ class CLIChat:
         
         Args:
             settings (ChatSettings): The chat settings to use.
-            debug_log (Optional[SessionDebugLog]): Logger for debugging information. Defaults to None.
         """
         self.settings = settings
         

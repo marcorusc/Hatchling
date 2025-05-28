@@ -1,3 +1,9 @@
+"""Model management module for interfacing with Ollama models.
+
+This module provides functionality for checking model availability, pulling models,
+and verifying the Ollama service status.
+"""
+
 import json
 from typing import List, Tuple
 import aiohttp
@@ -8,27 +14,27 @@ from hatchling.config.settings import ChatSettings
 
 class ModelManager:
     """Manages model availability and downloading."""
-    
+
     def __init__(self, settings: ChatSettings, debug_log: SessionDebugLog = None):
         """Initialize the model manager.
-        
+
         Args:
             settings (ChatSettings): Settings for chat configuration.
-            debug_log (SessionDebugLog, optional): Logger for debugging messages.
+            debug_log (SessionDebugLog, optional): Logger for debugging messages. Defaults to None.
         """
         self.settings = settings
         self.debug_log = debug_log
-    
+
     async def check_availability(self, session: aiohttp.ClientSession, model_name: str) -> bool:
         """Check if a model is available in Ollama.
-        
+
         Args:
             session (aiohttp.ClientSession): HTTP session to use for the request to Ollama/tags.
             model_name (str): Name of the model to check.
-            
+
         Returns:
             bool: True if the model is available, False otherwise.
-            
+
         Raises:
             Exception: If there is an error checking for model availability.
         """
@@ -44,19 +50,19 @@ class ModelManager:
                     raise Exception(f"Failed to list models: {response.status}, {text}")
         except Exception as e:
             raise Exception(f"Error checking available models: {e}")
-    
+
     async def pull_model(self, session: aiohttp.ClientSession, model_name: str) -> None:
         """Pull a model from Ollama.
-        
+
         Args:
             session (aiohttp.ClientSession): HTTP session to use for the request to Ollama/pull.
             model_name (str): Name of the model to pull.
-            
+
         Raises:
             Exception: If there is an error pulling the model.
         """
         self.debug_log.info(f"Pulling model: {model_name}")
-        
+
         try:
             async with session.post(
                 f"{self.settings.ollama_api_url}/pull",
@@ -68,7 +74,7 @@ class ModelManager:
                     error_msg = f"Failed to pull model: {response.status}, {text}"
                     self.debug_log.error(error_msg)
                     raise Exception(error_msg)
-                
+
                 self.debug_log.info(f"Started downloading {model_name}. This may take a while...")
                 async for line in response.content.iter_any():
                     if line:
@@ -76,13 +82,13 @@ class ModelManager:
                             line_text = line.decode('utf-8').strip()
                             if not line_text:
                                 continue
-                            
+
                             # Split by newlines to handle multiple JSON objects in one line
                             json_objects = line_text.split('\n')
                             for json_obj in json_objects:
                                 if not json_obj.strip():
                                     continue
-                                    
+
                                 try:
                                     data = json.loads(json_obj)
                                     if "status" in data:
@@ -96,19 +102,23 @@ class ModelManager:
                                     self.debug_log.error(f"Error processing model pull response: {e}\nData: {json_obj}")
                         except Exception as e:
                             self.debug_log.error(f"Error processing line: {e}")
-                
+
                 self.debug_log.info(f"Download of {model_name} completed.")
         except Exception as e:
             error_msg = f"Error pulling model: {e}"
             self.debug_log.error(error_msg)
             raise Exception(error_msg)
-            
+
     async def check_ollama_service(self) -> Tuple[bool, str]:
-        """Asynchronously check if Ollama service is available. Effectively tries to
-        get the version of the service with Ollama/version (timeout 5 seconds).
-        
+        """Asynchronously check if Ollama service is available.
+
+        Effectively tries to get the version of the service with Ollama/version
+        with a timeout of 5 seconds.
+
         Returns:
-            Tuple[bool, str]: A tuple containing (is_available, message).
+            Tuple[bool, str]: A tuple containing:
+                - bool: Whether the service is available
+                - str: A descriptive message
         """
         try:
             async with aiohttp.ClientSession() as session:

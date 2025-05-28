@@ -15,9 +15,9 @@ class HatchMCP():
         """Initialize the HatchMCP wrapper.
         
         Args:
-            name: The name of the MCP server.
-            origin_citation: Citation information for the original tools/algorithms.
-            mcp_citation: Citation information for the MCP server implementation.
+            name (str): The name of the MCP server.
+            origin_citation (str, optional): Citation information for the original tools/algorithms. Defaults to None.
+            mcp_citation (str, optional): Citation information for the MCP server implementation. Defaults to None.
         """
         # Initialize the logger
         self.logger = logging_manager.get_session(
@@ -53,7 +53,11 @@ class HatchMCP():
             mime_type="text/plain"
         )
         def get_server_name() -> str:
-            """Return the name of this MCP server."""
+            """Return the name of this MCP server.
+            
+            Returns:
+                str: The name of the MCP server.
+            """
             return self.name
 
         # Register citation resources using standard URIs and the resource decorator
@@ -64,7 +68,11 @@ class HatchMCP():
             mime_type="text/plain"
         )
         def get_origin_citation() -> str:
-            """Return citation information for the wrapped tools."""
+            """Return citation information for the wrapped tools.
+            
+            Returns:
+                str: Citation information text.
+            """
             return self._origin_citation
         
         @self.server.resource(
@@ -74,5 +82,9 @@ class HatchMCP():
             mime_type="text/plain"
         )
         def get_mcp_citation() -> str:
-            """Return citation information for the MCP server developers."""
+            """Return citation information for the MCP server developers.
+            
+            Returns:
+                str: Citation information text.
+            """
             return self._mcp_citation

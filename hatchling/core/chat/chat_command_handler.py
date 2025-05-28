@@ -1,3 +1,9 @@
+"""Chat command handler module for processing user commands in the chat interface.
+
+This module provides a central handler for all chat commands by combining
+base commands and Hatch-specific commands into a unified interface.
+"""
+
 import logging
 from typing import Tuple
 
