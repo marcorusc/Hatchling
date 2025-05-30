@@ -48,7 +48,7 @@ class MCPManager:
         self._adapter = None
         
         # Get a debug log session
-        self.debug_log = logging_manager.get_session(self.__class__.__name__,
+        self.logger = logging_manager.get_session(self.__class__.__name__,
                                   formatter=logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
     
     def validate_server_paths(self, server_paths: List[str]) -> List[str]:
@@ -67,7 +67,7 @@ class MCPManager:
             
             # Check if file exists
             if not os.path.isfile(abs_path):
-                self.debug_log.error(f"MCP server script not found: {abs_path}")
+                self.logger.error(f"MCP server script not found: {abs_path}")
                 continue
                 
             valid_paths.append(abs_path)
@@ -84,7 +84,7 @@ class MCPManager:
             Optional[subprocess.Popen]: Process object if server started successfully, None otherwise.
         """
         if not os.path.isfile(server_path):
-            self.debug_log.error(f"MCP server script not found: {server_path}")
+            self.logger.error(f"MCP server script not found: {server_path}")
             return None
         
         # Get the directory containing the script to use as the working directory
@@ -100,7 +100,7 @@ class MCPManager:
                 cwd=working_dir  # Set the working directory
             )
             
-            self.debug_log.info(f"MCP server started: {server_path}")
+            self.logger.info(f"MCP server started: {server_path}")
             
             # Store the process
             self.server_processes[server_path] = process
@@ -110,7 +110,7 @@ class MCPManager:
             
             return process
         except Exception as e:
-            self.debug_log.error(f"Error starting MCP server: {str(e)}")
+            self.logger.error(f"Error starting MCP server: {str(e)}")
             return None
     
     async def initialize(self, server_paths: List[str], auto_start: bool = False) -> bool:
@@ -148,7 +148,7 @@ class MCPManager:
             # Validate server paths
             valid_paths = self.validate_server_paths(server_paths)
             if not valid_paths:
-                self.debug_log.error("No valid MCP server scripts found")
+                self.logger.error("No valid MCP server scripts found")
                 return False
             
             # Connect to each valid server path
@@ -173,13 +173,13 @@ class MCPManager:
             if self.connected:
                 # Log the available tools across all clients
                 total_tools = sum(len(client.tools) for client in self.mcp_clients.values())
-                self.debug_log.info(f"Connected to {len(self.mcp_clients)} MCP servers with {total_tools} total tools")
+                self.logger.info(f"Connected to {len(self.mcp_clients)} MCP servers with {total_tools} total tools")
                 
                 # Update adapter schema cache if adapter exists
                 if self._adapter:
                     await self._adapter.build_schema_cache(self.get_tools_by_name())
             else:
-                self.debug_log.warning("Failed to connect to any MCP server")
+                self.logger.warning("Failed to connect to any MCP server")
                 
             return self.connected
     
@@ -194,14 +194,14 @@ class MCPManager:
                 try:
                     await client.disconnect()
                 except Exception as e:
-                    self.debug_log.error(f"Error disconnecting client for {path}: {e}")
+                    self.logger.error(f"Error disconnecting client for {path}: {e}")
                 
             # Clear all client tracking
             self.mcp_clients = {}
             self._tool_client_map = {}
             self.connected = False
             
-            self.debug_log.info("Disconnected from all MCP servers")
+            self.logger.info("Disconnected from all MCP servers")
     
     def get_tools_by_name(self) -> Dict[str, Any]:
         """Get a dictionary of tool name to tool object mappings.
@@ -280,7 +280,7 @@ class MCPManager:
                     server_citations = await client.get_citations()
                     citations[path] = server_citations
                 except Exception as e:
-                    self.debug_log.error(f"Error getting citations for {path}: {e}")
+                    self.logger.error(f"Error getting citations for {path}: {e}")
         
         return citations
 
@@ -310,9 +310,9 @@ class MCPManager:
             if process.poll() is None:  # Process is still running
                 try:
                     process.terminate()
-                    self.debug_log.info(f"Terminated MCP server: {path}")
+                    self.logger.info(f"Terminated MCP server: {path}")
                 except Exception as e:
-                    self.debug_log.error(f"Error terminating MCP server {path}: {e}")
+                    self.logger.error(f"Error terminating MCP server {path}: {e}")
             
             # Remove from tracking
             del self.server_processes[path]

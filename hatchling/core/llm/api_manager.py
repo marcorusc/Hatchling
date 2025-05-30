@@ -16,7 +16,7 @@ class APIManager:
             settings: The application settings
         """
         self.settings = settings
-        self.debug_log = logging_manager.get_session(f"APIManager-{settings.ollama_model}",
+        self.logger = logging_manager.get_session(f"APIManager-{settings.ollama_model}",
                                       formatter=logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
         self.model_name = settings.ollama_model
     
@@ -34,7 +34,7 @@ class APIManager:
             "messages": messages,
             "stream": True  # Always stream
         }
-        self.debug_log.debug(f"Prepared payload: {json.dumps(payload)}")
+        self.logger.debug(f"Prepared payload: {json.dumps(payload)}")
         return payload
     
     def add_tools_to_payload(self, payload: Dict[str, Any], tools: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -50,7 +50,7 @@ class APIManager:
         if tools:
             payload["tools"] = tools
             payload["tool_choice"] = "auto"
-            self.debug_log.debug(f"Added {len(tools)} tools to payload: {tools}")
+            self.logger.debug(f"Added {len(tools)} tools to payload: {tools}")
         return payload
     
     def has_tool_calls(self, data: Dict[str, Any]) -> bool:
@@ -141,7 +141,7 @@ class APIManager:
         async with session.post(f"{self.settings.ollama_api_url}/chat", json=payload) as response:
             if response.status != 200:
                 error_text = await response.text()
-                self.debug_log.error(f"Error: {response.status}, {error_text}")
+                self.logger.error(f"Error: {response.status}, {error_text}")
                 raise Exception(f"Error: {response.status}, {error_text}")
             
             async for line in response.content.iter_any():
@@ -154,7 +154,7 @@ class APIManager:
                         continue
                     
                     # Debug log the raw response
-                    self.debug_log.debug(f"Raw response: {line_text}")
+                    self.logger.debug(f"Raw response: {line_text}")
                     
                     # Parse the JSON response
                     data = json.loads(line_text)
@@ -176,9 +176,9 @@ class APIManager:
                         break
                     
                 except json.JSONDecodeError as e:
-                    self.debug_log.error(f"Invalid JSON: {e}")
+                    self.logger.error(f"Invalid JSON: {e}")
                 except Exception as e:
-                    self.debug_log.error(f"Error processing response: {e}")
+                    self.logger.error(f"Error processing response: {e}")
         
         # Update message history if requested
         if update_history and history:

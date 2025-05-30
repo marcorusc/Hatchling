@@ -23,7 +23,7 @@ class ToolExecutionManager:
             settings (ChatSettings): The application settings.
         """
         self.settings = settings
-        self.debug_log = logging_manager.get_session(f"ToolExecutionManager-{settings.ollama_model}",
+        self.logger = logging_manager.get_session(f"ToolExecutionManager-{settings.ollama_model}",
                                       formatter=logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
         self.tools_enabled = False
         
@@ -45,9 +45,9 @@ class ToolExecutionManager:
         self.tools_enabled = await mcp_manager.initialize(server_paths)
         
         if self.tools_enabled:
-            self.debug_log.info(f"Connected to MCP servers")
+            self.logger.info(f"Connected to MCP servers")
         else:
-            self.debug_log.warning("Failed to connect to any MCP server")
+            self.logger.warning("Failed to connect to any MCP server")
             
         return self.tools_enabled
     
@@ -110,7 +110,7 @@ class ToolExecutionManager:
                     pass
                 
                 # Show the tool result to the user
-                self.debug_log.info(f"[Tool result: {result_content}]")
+                self.logger.info(f"[Tool result: {result_content}]")
                 
                 # Return the tool result
                 return {
@@ -120,7 +120,7 @@ class ToolExecutionManager:
                     "content": str(result_content)
                 }
         except Exception as e:
-            self.debug_log.error(f"Error executing tool: {e}")
+            self.logger.error(f"Error executing tool: {e}")
         
         return None
     
@@ -145,7 +145,7 @@ class ToolExecutionManager:
             arguments = {}
         
         # Show tool usage to the user
-        self.debug_log.info(f"[Using tool: {function_name} with arguments: {json.dumps(arguments)}]")
+        self.logger.info(f"[Using tool: {function_name} with arguments: {json.dumps(arguments)}]")
         
         # Execute tool and get result
         if self.tools_enabled:
@@ -165,7 +165,7 @@ class ToolExecutionManager:
         """
         tool_results = []
         current_tool_calls = data["message"]["tool_calls"]
-        self.debug_log.info(f"Found tool calls: {json.dumps(current_tool_calls)}")
+        self.logger.info(f"Found tool calls: {json.dumps(current_tool_calls)}")
         
         # Process each tool call
         for tool_call in current_tool_calls:
@@ -219,11 +219,11 @@ class ToolExecutionManager:
         if reached_max_iterations or reached_time_limit:
             # We've reached a limit, return what we have
             limit_reason = "maximum iterations" if reached_max_iterations else "time limit"
-            self.debug_log.warning(f"Reached {limit_reason} for tool calling ({self.current_tool_call_iteration} iterations, {elapsed_time:.1f}s)")
+            self.logger.warning(f"Reached {limit_reason} for tool calling ({self.current_tool_call_iteration} iterations, {elapsed_time:.1f}s)")
             return _full_response, _message_tool_calls, _tool_results
         
         # Continue with sequential tool calling - prepare new payload with updated messages
-        self.debug_log.debug("Preparing next payload for sequential tool calling")
+        self.logger.debug("Preparing next payload for sequential tool calling")
         history.add_user_message(f"Given the tool results: {tool_results}, do you have enough information to answer the original query: `{self.root_tool_query}`? If not, please ask for more information or continue using tools.")
         
         # Prepare the next payload
@@ -237,7 +237,7 @@ class ToolExecutionManager:
 
         if __tool_results:
             # Process the next step (recursive call)
-            self.debug_log.info(f"Continuing with tool calling iteration {self.current_tool_call_iteration}/{self.settings.max_tool_call_iteration} ({elapsed_time:.1f}s elapsed)")
+            self.logger.info(f"Continuing with tool calling iteration {self.current_tool_call_iteration}/{self.settings.max_tool_call_iteration} ({elapsed_time:.1f}s elapsed)")
             _full_response, _message_tool_calls, _tool_results = await self.handle_tool_calling_chain(
                                                             session,
                                                             api_manager, 

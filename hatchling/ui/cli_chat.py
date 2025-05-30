@@ -22,7 +22,7 @@ class CLIChat:
             settings (ChatSettings): The chat settings to use.
         """
         # Create a debug log if not provided
-        self.debug_log = logging_manager.get_session("CLIChat",
+        self.logger = logging_manager.get_session("CLIChat",
                                 formatter=logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
         
         self.settings = settings
@@ -33,7 +33,7 @@ class CLIChat:
         )
             
         # Create the model manager
-        self.model_manager = ModelManager(settings, self.debug_log)
+        self.model_manager = ModelManager(settings, self.logger)
         
         # Chat session will be initialized during startup
         self.chat_session = None
@@ -48,14 +48,14 @@ class CLIChat:
         # Check if Ollama service is available
         available, message = await self.model_manager.check_ollama_service()
         if not available:
-            self.debug_log.error(message)
-            self.debug_log.error(f"Please ensure the Ollama service is running at {self.settings.ollama_api_url} before running this script.")
+            self.logger.error(message)
+            self.logger.error(f"Please ensure the Ollama service is running at {self.settings.ollama_api_url} before running this script.")
             return False
         
-        self.debug_log.info(message)
+        self.logger.info(message)
         
         # Check if MCP server is available
-        self.debug_log.info("Checking MCP server availability...")
+        self.logger.info("Checking MCP server availability...")
         # Get the name of the current environment
         name = self.env_manager.get_current_environment()
         # Retrieve the environment's entry points for the MCP servers
@@ -63,18 +63,18 @@ class CLIChat:
         mcp_available = await mcp_manager.initialize(mcp_servers_url)
 
         if mcp_available:
-            self.debug_log.info("MCP server is available! Tool calling is ready to use.")
-            self.debug_log.info("You can enable tools during the chat session by typing 'enable_tools'")
+            self.logger.info("MCP server is available! Tool calling is ready to use.")
+            self.logger.info("You can enable tools during the chat session by typing 'enable_tools'")
             # Disconnect after checking
             await mcp_manager.disconnect_all()
         else:
-            self.debug_log.warning("MCP server is not available. Continuing without MCP tools...")
+            self.logger.warning("MCP server is not available. Continuing without MCP tools...")
             
         # Initialize chat session
         self.chat_session = ChatSession(self.settings)
         
         # Initialize command handler
-        self.cmd_handler = ChatCommandHandler(self.chat_session, self.settings, self.env_manager, self.debug_log)
+        self.cmd_handler = ChatCommandHandler(self.chat_session, self.settings, self.env_manager, self.logger)
         
         return True
     
@@ -92,28 +92,28 @@ class CLIChat:
             is_model_available = await self.model_manager.check_availability(session, self.settings.ollama_model)
             
             if is_model_available:
-                self.debug_log.info(f"Model {self.settings.ollama_model} is already pulled.")
+                self.logger.info(f"Model {self.settings.ollama_model} is already pulled.")
                 return True
             else:
                 await self.model_manager.pull_model(session, self.settings.ollama_model)
                 return True
         except Exception as e:
-            self.debug_log.error(f"Error checking/pulling model: {e}")
+            self.logger.error(f"Error checking/pulling model: {e}")
             return False
     
     async def start_interactive_session(self) -> None:
         """Run an interactive chat session with message history."""
         if not self.chat_session or not self.cmd_handler:
-            self.debug_log.error("Chat session not initialized. Call initialize() first.")
+            self.logger.error("Chat session not initialized. Call initialize() first.")
             return
         
-        self.debug_log.info(f"Starting interactive chat with {self.settings.ollama_model}")
+        self.logger.info(f"Starting interactive chat with {self.settings.ollama_model}")
         self.cmd_handler.print_commands_help()
         
         async with aiohttp.ClientSession() as session:
             # Check and pull the model if needed
             if not await self.check_and_pull_model(session):
-                self.debug_log.error("Failed to ensure model availability")
+                self.logger.error("Failed to ensure model availability")
                 return
             
             # Start the interactive chat loop
@@ -144,7 +144,7 @@ class CLIChat:
                     print("\nInterrupted. Ending chat session...")
                     break
                 except Exception as e:
-                    self.debug_log.error(f"Error: {e}")
+                    self.logger.error(f"Error: {e}")
                     print(f"\nError: {e}")
     
     async def initialize_and_run(self) -> None:
@@ -159,7 +159,7 @@ class CLIChat:
             
         except Exception as e:
             error_msg = f"An error occurred: {e}"
-            self.debug_log.error(error_msg)
+            self.logger.error(error_msg)
             return
         
         finally:

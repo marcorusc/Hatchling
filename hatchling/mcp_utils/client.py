@@ -31,7 +31,7 @@ class MCPClient:
         self.RECONNECTION_DELAY = 2  # seconds
         
         # Get a debug log session from the LoggingManager
-        self.debug_log = logging_manager.get_session(self.__class__.__name__,
+        self.logger = logging_manager.get_session(self.__class__.__name__,
                                   formatter=logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
     
     async def connect(self, server_path: str) -> bool:
@@ -53,7 +53,7 @@ class MCPClient:
                 env=os.environ.copy(),  # Use default environment variables
             )
             
-            self.debug_log.debug(f"Connecting to MCP server: {server_path}")
+            self.logger.debug(f"Connecting to MCP server: {server_path}")
             
             # Create the stdio client connection with a simpler approach
             try:
@@ -64,7 +64,7 @@ class MCPClient:
                 )
                 self.read, self.write = stdio_transport
             except asyncio.TimeoutError:
-                self.debug_log.error(f"Connection to MCP server timed out: {server_path}")
+                self.logger.error(f"Connection to MCP server timed out: {server_path}")
                 return False
                 
             # Create the client session
@@ -84,13 +84,13 @@ class MCPClient:
             for tool in tools:
                 self.tools[tool.name] = tool
             
-            self.debug_log.info(f"Connected to MCP server: {server_path}")
-            self.debug_log.info(f"Discovered {len(self.tools)} tools: {', '.join(self.tools.keys())}")
+            self.logger.info(f"Connected to MCP server: {server_path}")
+            self.logger.info(f"Discovered {len(self.tools)} tools: {', '.join(self.tools.keys())}")
 
             # List available citations
             citations = await self.get_citations()
-            self.debug_log.info("Tool Origin Citation: " + citations["origin"])
-            self.debug_log.info("MCP Implementation Citation: " + citations["mcp"])
+            self.logger.info("Tool Origin Citation: " + citations["origin"])
+            self.logger.info("MCP Implementation Citation: " + citations["mcp"])
             
             # Start heartbeat task to monitor connection
             self._start_heartbeat()
@@ -98,10 +98,10 @@ class MCPClient:
             return True
             
         except asyncio.CancelledError:
-            self.debug_log.warning("Connection attempt cancelled")
+            self.logger.warning("Connection attempt cancelled")
             raise
         except Exception as e:
-            self.debug_log.error(f"Failed to connect to MCP server at {server_path}: {str(e)}")
+            self.logger.error(f"Failed to connect to MCP server at {server_path}: {str(e)}")
             self.connected = False
             return False
     
@@ -121,13 +121,13 @@ class MCPClient:
                 try:
                     # Try a lightweight operation to check connection
                     await self.session.list_tools()
-                    self.debug_log.debug("Connection heartbeat: OK")
+                    self.logger.debug("Connection heartbeat: OK")
                 except Exception as e:
-                    self.debug_log.warning(f"Connection heartbeat failed: {e}")
+                    self.logger.warning(f"Connection heartbeat failed: {e}")
                     # Try to reconnect
                     if self._reconnection_attempts < self.MAX_RECONNECTION_ATTEMPTS:
                         self._reconnection_attempts += 1
-                        self.debug_log.warning(f"Attempting to reconnect ({self._reconnection_attempts}/{self.MAX_RECONNECTION_ATTEMPTS})")
+                        self.logger.warning(f"Attempting to reconnect ({self._reconnection_attempts}/{self.MAX_RECONNECTION_ATTEMPTS})")
                         await asyncio.sleep(self.RECONNECTION_DELAY)
                         
                         # Close existing session before reconnecting
@@ -137,20 +137,20 @@ class MCPClient:
                         success = await self.connect(self.server_path)
                         if success:
                             self._reconnection_attempts = 0
-                            self.debug_log.info("Successfully reconnected")
+                            self.logger.info("Successfully reconnected")
                         else:
-                            self.debug_log.error("Failed to reconnect")
+                            self.logger.error("Failed to reconnect")
                     else:
-                        self.debug_log.error(f"Maximum reconnection attempts reached ({self.MAX_RECONNECTION_ATTEMPTS})")
+                        self.logger.error(f"Maximum reconnection attempts reached ({self.MAX_RECONNECTION_ATTEMPTS})")
                         self.connected = False
                         break
                     
         except asyncio.CancelledError:
-            self.debug_log.debug("Heartbeat task cancelled")
+            self.logger.debug("Heartbeat task cancelled")
         except Exception as e:
-            self.debug_log.error(f"Error in heartbeat task: {e}")
+            self.logger.error(f"Error in heartbeat task: {e}")
         finally:
-            self.debug_log.debug("Heartbeat task stopped")
+            self.logger.debug("Heartbeat task stopped")
             self._heartbeat_task = None
     
     async def _cleanup_connection(self):
@@ -166,7 +166,7 @@ class MCPClient:
         """Disconnect from the MCP server and clean up resources."""
         if self.connected:
             try:
-                self.debug_log.debug(f"Disconnecting from MCP server: {self.server_path}")
+                self.logger.debug(f"Disconnecting from MCP server: {self.server_path}")
                 
                 # Cancel heartbeat task
                 if self._heartbeat_task:
@@ -183,14 +183,14 @@ class MCPClient:
                     # Close the exit stack with a timeout
                     await asyncio.wait_for(self.exit_stack.aclose(), timeout=5)
                 except asyncio.TimeoutError:
-                    self.debug_log.warning("Timeout while closing resources")
+                    self.logger.warning("Timeout while closing resources")
                 except Exception as e:
-                    self.debug_log.error(f"Error closing resources: {e}")
+                    self.logger.error(f"Error closing resources: {e}")
                     
-                self.debug_log.info(f"Disconnected from MCP server: {self.server_path}")
+                self.logger.info(f"Disconnected from MCP server: {self.server_path}")
                 
             except Exception as e:
-                self.debug_log.error(f"Error disconnecting from MCP server: {str(e)}")
+                self.logger.error(f"Error disconnecting from MCP server: {str(e)}")
             finally:
                 self.connected = False
                 self.tools = {}
@@ -221,9 +221,9 @@ class MCPClient:
                 server_name_response = await self.session.read_resource(uri=server_name_uri)
                 if server_name_response and server_name_response.contents:
                     citations["server_name"] = server_name_response.contents[0].text
-                    self.debug_log.debug(f"Retrieved server name from {server_name_uri}: {citations["server_name"]}")
+                    self.logger.debug(f"Retrieved server name from {server_name_uri}: {citations["server_name"]}")
             except Exception as e:
-                self.debug_log.error(f"Failed to get server name: {e}")
+                self.logger.error(f"Failed to get server name: {e}")
                 
             # Try to read origin citation
             try:
@@ -231,9 +231,9 @@ class MCPClient:
                 origin_response = await self.session.read_resource(uri=origin_uri)
                 if origin_response and origin_response.contents:
                     citations["origin"] = origin_response.contents[0].text
-                    self.debug_log.debug(f"Retrieved origin citation from {origin_uri}")
+                    self.logger.debug(f"Retrieved origin citation from {origin_uri}")
             except Exception as e:
-                self.debug_log.error(f"Failed to get origin citation: {e}")
+                self.logger.error(f"Failed to get origin citation: {e}")
             
             # Try to read MCP citation
             try:
@@ -241,12 +241,12 @@ class MCPClient:
                 mcp_response = await self.session.read_resource(uri=mcp_uri)
                 if mcp_response and mcp_response.contents:
                     citations["mcp"] = mcp_response.contents[0].text
-                    self.debug_log.debug(f"Retrieved MCP citation from {mcp_uri}")
+                    self.logger.debug(f"Retrieved MCP citation from {mcp_uri}")
             except Exception as e:
-                self.debug_log.error(f"Failed to get MCP citation: {e}")
+                self.logger.error(f"Failed to get MCP citation: {e}")
                 
         except Exception as e:
-            self.debug_log.error(f"Error retrieving citations: {e}")
+            self.logger.error(f"Error retrieving citations: {e}")
             
         return citations
     
@@ -288,9 +288,9 @@ class MCPClient:
                     return result
                     
             except asyncio.TimeoutError:
-                self.debug_log.error(f"Tool execution timed out: {tool_name}")
+                self.logger.error(f"Tool execution timed out: {tool_name}")
                 raise TimeoutError(f"Execution of tool {tool_name} timed out after 30 seconds")
                 
         except Exception as e:
-            self.debug_log.error(f"Error executing tool {tool_name}: {str(e)}")
+            self.logger.error(f"Error executing tool {tool_name}: {str(e)}")
             raise
