@@ -3,8 +3,6 @@ import logging
 from pathlib import Path
 from hatchling.core.logging.logging_manager import logging_manager
 
-logger = logging_manager.get_session("Chat Settings", logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
-
 class ChatSettings:
     """Manages chat configuration settings."""
     
@@ -23,6 +21,10 @@ class ChatSettings:
             max_tool_call_iteration (int, optional): Maximum number of tool call iterations. Defaults to 5.
             max_working_time (float, optional): Maximum time in seconds for tool operations. Defaults to 30.0.
         """
+        self.logger = logging_manager.get_session("ChatSettings",
+                                                  logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+
+
         self.ollama_api_url = ollama_api_url
         self.ollama_model = ollama_model
 
@@ -38,6 +40,6 @@ class ChatSettings:
         self.max_tool_call_iteration = max_tool_call_iteration  # Maximum number of tool call iterations
         self.max_working_time = max_working_time  # Maximum time in seconds for tool operations
 
-        logger.info(f"ChatSettings initialized with model: {self.ollama_model}, API URL: {self.ollama_api_url}")
-        logger.info(f"Max tool call iterations: {self.max_tool_call_iteration}, Max working time: {self.max_working_time} seconds")
-        logger.info(f"Hatch environments directory: {self.hatch_envs_dir}")
+        self.logger.info(f"ChatSettings initialized with model: {self.ollama_model}, API URL: {self.ollama_api_url}")
+        self.logger.info(f"Max tool call iterations: {self.max_tool_call_iteration}, Max working time: {self.max_working_time} seconds")
+        self.logger.info(f"Hatch environments directory: {self.hatch_envs_dir}")
