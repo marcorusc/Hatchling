@@ -96,7 +96,7 @@ class LoggingManager:
                 logging.info(f"Logging to file: {self.log_file}")
             except Exception as e:
                 logging.error(f"Failed to set up file logging: {str(e)}")
-        
+
         self.set_log_level(self.log_level)
     
     def set_log_level(self, level: int) -> None:
@@ -106,8 +106,16 @@ class LoggingManager:
             level (int): The log level (e.g., logging.DEBUG, logging.INFO).
         """
         self.log_level = level
+    
+        # CRITICAL: Set root logger first
+        root_logger = logging.getLogger()
+        root_logger.setLevel(self.log_level)
         
-        # Set level for all existing loggers
+        # Set level for all handlers on root logger
+        for handler in root_logger.handlers:
+            handler.setLevel(self.log_level)
+        
+        # Then set level for all other loggers
         for logger_name in logging.root.manager.loggerDict:
             logger = logging.getLogger(logger_name)
             logger.setLevel(self.log_level)
@@ -133,9 +141,6 @@ class LoggingManager:
                 self.sessions[name] = SessionDebugLog(name, self.default_formatter)
             else:
                 self.sessions[name] = SessionDebugLog(name, formatter)
-                
-            # Keep session loggers non-propagating to avoid duplicate logs
-            # Their propagate flag is already set to False in the SessionDebugLog class
                 
         return self.sessions[name]
     
