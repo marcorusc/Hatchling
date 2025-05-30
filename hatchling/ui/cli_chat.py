@@ -21,16 +21,16 @@ class CLIChat:
         Args:
             settings (ChatSettings): The chat settings to use.
         """
+        # Create a debug log if not provided
+        self.debug_log = logging_manager.get_session("CLIChat",
+                                formatter=logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+        
         self.settings = settings
         
         self.env_manager = HatchEnvironmentManager(
             environments_dir = self.settings.hatch_envs_dir,
             cache_ttl = 86400,  # 1 day default
         )
-        
-        # Create a debug log if not provided
-        self.debug_log = logging_manager.get_session("CLIChat",
-                                formatter=logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
             
         # Create the model manager
         self.model_manager = ModelManager(settings, self.debug_log)
