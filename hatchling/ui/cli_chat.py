@@ -61,12 +61,9 @@ class CLIChat:
         # Retrieve the environment's entry points for the MCP servers
         mcp_servers_url = self.env_manager.get_servers_entry_points(name)
         mcp_available = await mcp_manager.initialize(mcp_servers_url)
-
         if mcp_available:
             self.logger.info("MCP server is available! Tool calling is ready to use.")
             self.logger.info("You can enable tools during the chat session by typing 'enable_tools'")
-            # Disconnect after checking
-            await mcp_manager.disconnect_all()
         else:
             self.logger.warning("MCP server is not available. Continuing without MCP tools...")
             
@@ -164,4 +161,5 @@ class CLIChat:
         
         finally:
             # Clean up any remaining MCP server processes
+            # We disconnect by default after checking MCP availability
             await mcp_manager.disconnect_all()
