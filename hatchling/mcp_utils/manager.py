@@ -182,26 +182,82 @@ class MCPManager:
                 self.logger.warning("Failed to connect to any MCP server")
                 
             return self.connected
-    
     async def disconnect_all(self) -> None:
         """Disconnect from all MCP servers."""
         if not self.connected:
             return
             
         async with self._connection_lock:
-            # Disconnect each client individually with error handling
+            # Store the current task for debugging
+            current_task_id = id(asyncio.current_task())
+            self.logger.debug(f"Disconnecting all clients from task: {current_task_id}")
+            
+            disconnection_errors = False
+            
+            # First try the graceful disconnect approach
             for path, client in list(self.mcp_clients.items()):
                 try:
-                    await client.disconnect()
+                    # Log task context for debugging
+                    if hasattr(client, '_connection_task_id') and client._connection_task_id:
+                        self.logger.debug(f"Client for {path} was created in task: {client._connection_task_id}")
+                    
+                    # Try graceful disconnect first with timeout
+                    disconnect_task = asyncio.create_task(client.disconnect())
+                    try:
+                        await asyncio.wait_for(disconnect_task, timeout=10)
+                    except asyncio.TimeoutError:
+                        self.logger.warning(f"Disconnect timeout for {path}")
+                        disconnection_errors = True
+                    except Exception as e:
+                        self.logger.error(f"Error during graceful disconnect for {path}: {e}")
+                        disconnection_errors = True
                 except Exception as e:
-                    self.logger.error(f"Error disconnecting client for {path}: {e}")
-                
-            # Clear all client tracking
+                    self.logger.error(f"Error setting up disconnect for {path}: {e}")
+                    disconnection_errors = True
+            
+            # If any disconnections failed with errors, use forceful termination
+            if disconnection_errors:
+                self.logger.warning("Some disconnections failed. Using forceful termination as fallback.")
+                self._terminate_server_processes()
+            
+            # Clear all client tracking regardless of disconnection success
             self.mcp_clients = {}
             self._tool_client_map = {}
-            self.connected = False
             
+            self.connected = False
             self.logger.info("Disconnected from all MCP servers")
+    
+    def _terminate_server_processes(self) -> None:
+        """Terminate all server processes directly.
+        This is a fallback mechanism when graceful disconnection fails.
+        """
+        terminated_count = 0
+        
+        # Kill all server processes
+        for path, process in list(self.server_processes.items()):
+            if process.poll() is None:  # Process is still running
+                try:
+                    # Send SIGTERM first for cleaner shutdown
+                    process.terminate()
+                    
+                    # Give it a moment to terminate
+                    try:
+                        process.wait(timeout=2)
+                    except subprocess.TimeoutExpired:
+                        # If it doesn't terminate in time, force kill
+                        process.kill()
+                        self.logger.warning(f"Force killed MCP server process: {path}")
+                    
+                    terminated_count += 1
+                    self.logger.debug(f"Terminated MCP server process: {path}")
+                except Exception as e:
+                    self.logger.error(f"Failed to terminate process for {path}: {e}")
+            
+            # Remove from tracking regardless of kill success
+            del self.server_processes[path]
+            
+        if terminated_count > 0:
+            self.logger.info(f"Forcefully terminated {terminated_count} server processes")
     
     def get_tools_by_name(self) -> Dict[str, Any]:
         """Get a dictionary of tool name to tool object mappings.
