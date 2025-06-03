@@ -112,6 +112,7 @@ class CLIChat:
             return
         
         self.logger.info(f"Starting interactive chat with {self.settings.ollama_model}")
+        print_pt(FormattedText([('cyan bold', '\n=== Hatchling Chat Interface ===\n')]))
         self.cmd_handler.print_commands_help()
         
         async with aiohttp.ClientSession() as session:
@@ -120,14 +121,23 @@ class CLIChat:
                 self.logger.error("Failed to ensure model availability")
                 return
               # Start the interactive chat loop
-            while True:
+            while True: 
                 try:
-                    # Get user input with prompt_toolkit
-                    status = "[Tools enabled]" if self.chat_session.tool_executor.tools_enabled else "[Tools disabled]"
+                    # Get user input with prompt_toolkit with a styled prompt
+                    if self.chat_session.tool_executor.tools_enabled:
+                        status_style = ('fg:#5fafff  bold', '[Tools enabled]') #aqua pearl
+                    else:
+                        status_style = ('fg:#005f5f', '[Tools disabled]') #very dark cyan
+                    
+                    # Create formatted prompt
+                    prompt_message = [
+                        status_style,
+                        ('', ' You: ')
+                    ]
                     
                     # Use patch_stdout to prevent output interference
                     with patch_stdout():
-                        user_message = await self.prompt_session.prompt_async(f"{status} You: ")
+                        user_message = await self.prompt_session.prompt_async(FormattedText(prompt_message))
                     
                     # Process as command if applicable
                     is_command, should_continue = await self.cmd_handler.process_command(user_message)
