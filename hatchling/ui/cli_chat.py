@@ -14,6 +14,7 @@ from hatchling.core.llm.chat_session import ChatSession
 from hatchling.core.chat.chat_command_handler import ChatCommandHandler
 from hatchling.config.settings import ChatSettings
 from hatchling.mcp_utils.manager import mcp_manager
+from hatchling.ui.styled_logging_handler import PromptToolkitLoggerAdapter, StyledLoggingHandler
 
 from hatch import HatchEnvironmentManager
 
@@ -25,9 +26,9 @@ class CLIChat:
         Args:
             settings (ChatSettings): The chat settings to use.
         """
-        # Create a debug log if not provided
-        self.logger = logging_manager.get_session("CLIChat",
-                                formatter=logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+        # Set up the logging system with a single call
+        _, self.logger, _ = PromptToolkitLoggerAdapter.setup_logging("CLIChat",
+                                                                     formatter=logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
         
         self.settings = settings
         

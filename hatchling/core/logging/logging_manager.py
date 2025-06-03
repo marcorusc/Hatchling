@@ -66,9 +66,11 @@ class LoggingManager:
         log_dir = Path(os.environ.get('LOG_DIR', Path.home() / '.hatch' / 'logs'))
         log_dir.mkdir(exist_ok=True, parents=True)
         self.log_file = log_dir / 'hatchling.log'
-
     def configure_root_logger(self):
-        """Configure the root logger with CLI handler and file handler if configured."""
+        """Configure the root logger with file handler only by default.
+        
+        Console output will be handled by StyledLoggingHandler when needed.
+        """
         # Get the root logger
         root_logger = logging.getLogger()
         
@@ -76,11 +78,9 @@ class LoggingManager:
         for handler in root_logger.handlers[:]:
             root_logger.removeHandler(handler)
             
-        # Create console handler
-        console = logging.StreamHandler()
-        console.setFormatter(self.default_formatter)
-        root_logger.addHandler(console)
-        
+        # By default, don't add console handler - this will be handled by prompt_toolkit
+        # in the UI layer to avoid duplicate/unstyled output
+            
         # Add file handler if log file is specified
         if self.log_file:
             try:
@@ -93,6 +93,7 @@ class LoggingManager:
                 file_handler.setFormatter(self.default_formatter)
                 root_logger.addHandler(file_handler)
                 
+                # Log to file only since console output will be handled separately
                 logging.info(f"Logging to file: {self.log_file}")
             except Exception as e:
                 logging.error(f"Failed to set up file logging: {str(e)}")
