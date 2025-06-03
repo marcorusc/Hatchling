@@ -28,7 +28,6 @@ class LoggingManager:
             cls._instance = super(LoggingManager, cls).__new__(cls)
             cls._instance._initialized = False
         return cls._instance
-    
     def __init__(self):
         """Initialize the logging manager if not already initialized."""
         if self._initialized:
@@ -37,68 +36,18 @@ class LoggingManager:
         # Initialize only once
         self._initialized = True
         
-        # Load log settings from environment variables
-        self._load_log_settings()
-        
-        # Default formatter for root logger
+        # Default formatter for root logger (used for sessions)
         self.default_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         
         # Store all session loggers by name
         self.sessions: Dict[str, SessionDebugLog] = {}
         
-        # Configure root logger for CLI output
-        self.configure_root_logger()
+        # Default log values (will be overridden by configure_logging)
+        self.log_level = logging.INFO
+        self.log_file = Path.home() / '.hatch' / 'logs' / 'hatchling.log'
     
-    def _load_log_settings(self):
-        """Load logging settings from environment variables."""
-        # Get log level from environment (default to INFO)
-        log_level_str = os.environ.get('LOG_LEVEL', 'INFO').upper()
-        log_levels = {
-            'DEBUG': logging.DEBUG,
-            'INFO': logging.INFO,
-            'WARNING': logging.WARNING,
-            'ERROR': logging.ERROR,
-            'CRITICAL': logging.CRITICAL
-        }
-        self.log_level = log_levels.get(log_level_str, logging.INFO)
-        
-        # Get log file path from environment
-        log_dir = Path(os.environ.get('LOG_DIR', Path.home() / '.hatch' / 'logs'))
-        log_dir.mkdir(exist_ok=True, parents=True)
-        self.log_file = log_dir / 'hatchling.log'
-    def configure_root_logger(self):
-        """Configure the root logger with file handler only by default.
-        
-        Console output will be handled by StyledLoggingHandler when needed.
-        """
-        # Get the root logger
-        root_logger = logging.getLogger()
-        
-        # Remove existing handlers to avoid duplicates if reconfigured
-        for handler in root_logger.handlers[:]:
-            root_logger.removeHandler(handler)
-            
-        # By default, don't add console handler - this will be handled by prompt_toolkit
-        # in the UI layer to avoid duplicate/unstyled output
-            
-        # Add file handler if log file is specified
-        if self.log_file:
-            try:
-                # Use rotating file handler to prevent huge log files
-                file_handler = RotatingFileHandler(
-                    str(self.log_file), 
-                    maxBytes=10*1024*1024,  # 10 MB
-                    backupCount=5
-                )
-                file_handler.setFormatter(self.default_formatter)
-                root_logger.addHandler(file_handler)
-                
-                # Log to file only since console output will be handled separately
-                logging.info(f"Logging to file: {self.log_file}")
-            except Exception as e:
-                logging.error(f"Failed to set up file logging: {str(e)}")
 
-        self.set_log_level(self.log_level)
+
     
     def set_log_level(self, level: int) -> None:
         """Set the log level for all loggers and handlers.

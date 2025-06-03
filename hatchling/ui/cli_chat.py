@@ -1,9 +1,11 @@
 import aiohttp
 import logging
+import asyncio
 from pathlib import Path
+from typing import Optional
 
 from prompt_toolkit import PromptSession, print_formatted_text as print_pt
-from prompt_toolkit.history import FileHistory
+from prompt_toolkit.history import FileHistory, InMemoryHistory
 from prompt_toolkit.patch_stdout import patch_stdout
 from prompt_toolkit.formatted_text import FormattedText
 
@@ -13,7 +15,7 @@ from hatchling.core.llm.chat_session import ChatSession
 from hatchling.core.chat.chat_command_handler import ChatCommandHandler
 from hatchling.config.settings import ChatSettings
 from hatchling.mcp_utils.manager import mcp_manager
-from hatchling.ui.styled_logging_handler import PromptToolkitLoggerAdapter, StyledLoggingHandler
+# Import removed - using centralized logging system
 
 from hatch import HatchEnvironmentManager
 
@@ -25,15 +27,21 @@ class CLIChat:
         Args:
             settings (ChatSettings): The chat settings to use.
         """
-        # Set up the logging system with a single call
-        _, self.logger, _ = PromptToolkitLoggerAdapter.setup_logging("CLIChat",
-                                                                     formatter=logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+        # Get a logger - styling is already configured at the application level
+        self.logger = logging_manager.get_session("CLIChat")
         
         # Initialize prompt toolkit session with history
         history_dir = Path.home() / '.hatch' / 'histories'
         history_dir.mkdir(exist_ok=True, parents=True)
-        self.prompt_session = PromptSession(
-            history=FileHistory(history_dir / '.user_inputs'))
+        
+        # Setup persistent history with 500 entries limit
+        try:
+            self.prompt_session = PromptSession(
+                history=FileHistory(str(history_dir / '.user_inputs')))
+        except (IOError, OSError) as e:
+            self.logger.warning(f"Could not create history file: {e}")
+            self.logger.warning("Falling back to in-memory history")
+            self.prompt_session = PromptSession(history=InMemoryHistory())
 
         self.settings = settings
         
