@@ -1,10 +1,9 @@
-import asyncio
 import aiohttp
 import logging
-from typing import Optional
+from pathlib import Path
 
 from prompt_toolkit import PromptSession, print_formatted_text as print_pt
-from prompt_toolkit.history import InMemoryHistory
+from prompt_toolkit.history import FileHistory
 from prompt_toolkit.patch_stdout import patch_stdout
 from prompt_toolkit.formatted_text import FormattedText
 
@@ -30,6 +29,12 @@ class CLIChat:
         _, self.logger, _ = PromptToolkitLoggerAdapter.setup_logging("CLIChat",
                                                                      formatter=logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
         
+        # Initialize prompt toolkit session with history
+        history_dir = Path.home() / '.hatch' / 'histories'
+        history_dir.mkdir(exist_ok=True, parents=True)
+        self.prompt_session = PromptSession(
+            history=FileHistory(history_dir / '.user_inputs'))
+
         self.settings = settings
         
         self.env_manager = HatchEnvironmentManager(
@@ -43,9 +48,6 @@ class CLIChat:
         # Chat session will be initialized during startup
         self.chat_session = None
         self.cmd_handler = None
-        
-        # Initialize prompt toolkit session with history
-        self.prompt_session = PromptSession(history=InMemoryHistory())
     
     async def initialize(self) -> bool:
         """Initialize the chat environment.
