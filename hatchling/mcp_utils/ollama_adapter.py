@@ -13,7 +13,7 @@ class OllamaMCPAdapter:
         self._mcp_to_ollama_schemas = {}  # Cache for MCP schemas converted to Ollama format
         
         # Get a debug log session from the logging_manager
-        self.debug_log = logging_manager.get_session(self.__class__.__name__,
+        self.logger = logging_manager.get_session(self.__class__.__name__,
                                                     formatter=logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
     
     async def build_schema_cache(self, mcp_tools: Dict[str, Any]) -> None:
@@ -40,10 +40,10 @@ class OllamaMCPAdapter:
                 # Cache the Ollama schema
                 self._mcp_to_ollama_schemas[tool_name] = ollama_schema
 
-            self.debug_log.debug(f"Built schema cache for {len(self._mcp_to_ollama_schemas)} tools")
+            self.logger.debug(f"Built schema cache for {len(self._mcp_to_ollama_schemas)} tools")
             
         except Exception as e:
-            self.debug_log.error(f"Error building tool schema cache: {e}")
+            self.logger.error(f"Error building tool schema cache: {e}")
             # Don't re-raise, as this is a non-critical error that shouldn't halt execution
     
     def _extract_MCPTool_schema_in_Ollama(self, tool) -> Dict[str, Any]:
@@ -64,7 +64,7 @@ class OllamaMCPAdapter:
             }
             return schema
         else:
-            self.debug_log.error(f"Provided tool object does not have the expected attributes")
+            self.logger.error(f"Provided tool object does not have the expected attributes")
             return {}
     
     def get_all_tools(self) -> List[Dict[str, Any]]:
@@ -74,10 +74,10 @@ class OllamaMCPAdapter:
             List[Dict[str, Any]]: List of tools in Ollama format.
         """
         if not self._mcp_to_ollama_schemas:
-            self.debug_log.warning("No tools available in schema cache")
+            self.logger.warning("No tools available in schema cache")
             return []
             
-        self.debug_log.debug(f"Returning {len(self._mcp_to_ollama_schemas)} tools from schema cache")
+        self.logger.debug(f"Returning {len(self._mcp_to_ollama_schemas)} tools from schema cache")
         return list(self._mcp_to_ollama_schemas.values())
 
     async def process_tool_calls(self, tool_calls: List[Dict[str, Any]], manager) -> List[Dict[str, Any]]:
@@ -115,7 +115,7 @@ class OllamaMCPAdapter:
         function_call = tool_call.get("function", {})
         function_name = function_call.get("name", "")
         
-        self.debug_log.debug(f"Processing tool call: {function_name}")
+        self.logger.debug(f"Processing tool call: {function_name}")
         
         # Parse arguments (safely)
         try:
@@ -125,7 +125,7 @@ class OllamaMCPAdapter:
             else:
                 arguments = function_call.get("arguments", {})
         except json.JSONDecodeError as e:
-            self.debug_log.error(f"Invalid JSON in tool call arguments: {function_call.get('arguments')}: {e}")
+            self.logger.error(f"Invalid JSON in tool call arguments: {function_call.get('arguments')}: {e}")
             arguments = {}
         
         # Execute the tool
@@ -134,22 +134,22 @@ class OllamaMCPAdapter:
         
         try:
             # Execute the tool using the manager
-            self.debug_log.debug(f"Executing tool {function_name} with arguments: {arguments}")
+            self.logger.debug(f"Executing tool {function_name} with arguments: {arguments}")
             result = await manager.execute_tool(function_name, arguments)
             
         except ValueError as param_error:
             # Parameter validation error
             error = f"Parameter error executing tool {function_name}: {param_error}"
-            self.debug_log.error(error)
+            self.logger.error(error)
         except ConnectionError as e:
             error = f"Connection error executing tool {function_name}: {e}"
-            self.debug_log.error(error)
+            self.logger.error(error)
         except TimeoutError as e:
             error = f"Timeout error executing tool {function_name}: {e}"
-            self.debug_log.error(error)
+            self.logger.error(error)
         except Exception as e:
             error = f"Error executing tool {function_name}: {e}"
-            self.debug_log.error(error)
+            self.logger.error(error)
 
         # Create the tool response in Ollama's expected format
         tool_response = {

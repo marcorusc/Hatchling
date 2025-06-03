@@ -17,7 +17,7 @@ class MessageHistory:
             debug_log (Optional[SessionDebugLog]): Optional logger for debug information.
         """
         self.messages: List[Dict[str, Any]] = []
-        self.debug_log = debug_log
+        self.logger = debug_log
     
     def add_user_message(self, content: str) -> None:
         """Add a user message to the history.
@@ -26,8 +26,8 @@ class MessageHistory:
             content (str): The message content.
         """
         self.messages.append({"role": "user", "content": content})
-        if self.debug_log:
-            self.debug_log.debug(f"MessageHistory - Added user message: {content}")
+        if self.logger:
+            self.logger.debug(f"MessageHistory - Added user message: {content}")
     
     def add_assistant_message(self, content: str, tool_calls: List[Dict[str, Any]] = None) -> None:
         """Add an assistant message to the history.
@@ -45,8 +45,8 @@ class MessageHistory:
                 "tool_calls": tool_calls
             })
         
-        if self.debug_log:
-            self.debug_log.debug(f"MessageHistory - Added assistant message: {content}")
+        if self.logger:
+            self.logger.debug(f"MessageHistory - Added assistant message: {content}")
     
     def add_tool_result(self, tool_call_id: str, function_name: str, content: str) -> None:
         """Add a tool result to the history.
@@ -63,8 +63,8 @@ class MessageHistory:
             "content": content
         })
         
-        if self.debug_log:
-            self.debug_log.debug(f"MessageHistory - Added tool result for {function_name}: {content}")
+        if self.logger:
+            self.logger.debug(f"MessageHistory - Added tool result for {function_name}: {content}")
     
     def update_message_history(self, full_response: str, message_tool_calls: List[Dict[str, Any]], 
                                tool_results: List[Dict[str, Any]]) -> None:
@@ -137,15 +137,15 @@ class MessageHistory:
         Returns:
             MessageHistory: A new MessageHistory with the same messages.
         """
-        new_history = MessageHistory(self.debug_log)
+        new_history = MessageHistory(self.logger)
         new_history.messages = self.messages.copy()
         return new_history
     
     def clear(self) -> None:
         """Clear all messages."""
         self.messages = []
-        if self.debug_log:
-            self.debug_log.info("MessageHistory - Cleared!")
+        if self.logger:
+            self.logger.info("MessageHistory - Cleared!")
     
     def __len__(self) -> int:
         """Get the number of messages.

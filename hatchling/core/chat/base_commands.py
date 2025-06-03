@@ -30,7 +30,7 @@ class BaseChatCommands:
         self.chat_session = chat_session
         self.settings = settings
         self.env_manager = env_manager
-        self.debug_log = debug_log
+        self.logger = debug_log
 
         self._register_commands()
         
@@ -136,12 +136,12 @@ class BaseChatCommands:
         
         if level_name in level_map:
             logging_manager.set_log_level(level_map[level_name])
-            self.debug_log.info(f"Log level set to {level_name}")
+            self.logger.info(f"Log level set to {level_name}")
             if logging_manager.log_level > logging.INFO:
                 # the only place where use a print given the change of log level might disable the logger
                 print(f"Log level set to {level_name}")
         else:
-            self.debug_log.error(f"Unknown log level: {level_name}. Available levels are: debug, info, warning, error, critical")
+            self.logger.error(f"Unknown log level: {level_name}. Available levels are: debug, info, warning, error, critical")
         return True
     
     async def _cmd_enable_tools(self, _: str) -> bool:
@@ -156,7 +156,7 @@ class BaseChatCommands:
 
         # If tools are already enabled, do nothing
         if self.chat_session.tool_executor.tools_enabled:
-            self.debug_log.warning("MCP tools are already enabled.")
+            self.logger.warning("MCP tools are already enabled.")
             return True
 
         # Get the name of the current environment
@@ -168,11 +168,11 @@ class BaseChatCommands:
             # Reconnect to the new environment's tools
             connected = await self.chat_session.initialize_mcp(mcp_servers_url)
             if not connected:
-                self.debug_log.error("Failed to connect to new environment's MCP servers. Tools not enabled.")
+                self.logger.error("Failed to connect to new environment's MCP servers. Tools not enabled.")
             else:
-                self.debug_log.info("Connected to new environment's MCP servers successfully!")
+                self.logger.info("Connected to new environment's MCP servers successfully!")
         else:
-            self.debug_log.error("No MCP servers found for the current environment. Tools cannot be enabled.")
+            self.logger.error("No MCP servers found for the current environment. Tools cannot be enabled.")
             return False
         return True
 
@@ -190,9 +190,9 @@ class BaseChatCommands:
             self.chat_session.tool_executor.tools_enabled = False
             # Clear messages that might have tool-specific content
             self.chat_session.history.clear()
-            self.debug_log.info("MCP tools disabled successfully!")
+            self.logger.info("MCP tools disabled successfully!")
         else:
-            self.debug_log.warning("MCP tools are already disabled.")
+            self.logger.warning("MCP tools are already disabled.")
         return True
     
     def _cmd_set_max_iterations(self, args: str) -> bool:
@@ -208,11 +208,11 @@ class BaseChatCommands:
             iterations = int(args.strip())
             if iterations > 0:
                 self.settings.max_tool_call_iteration = iterations
-                self.debug_log.info(f"Maximum tool call iterations set to {iterations}")
+                self.logger.info(f"Maximum tool call iterations set to {iterations}")
             else:
-                self.debug_log.error("Maximum iterations must be greater than 0")
+                self.logger.error("Maximum iterations must be greater than 0")
         except ValueError:
-            self.debug_log.error("Invalid value for maximum iterations. Usage: set_max_tool_call_iterations <positive integer>")
+            self.logger.error("Invalid value for maximum iterations. Usage: set_max_tool_call_iterations <positive integer>")
         return True
     
     def _cmd_set_max_working_time(self, args: str) -> bool:
@@ -228,9 +228,9 @@ class BaseChatCommands:
             seconds = float(args.strip())
             if seconds > 0:
                 self.settings.max_working_time = seconds
-                self.debug_log.info(f"Maximum working time set to {seconds} seconds")
+                self.logger.info(f"Maximum working time set to {seconds} seconds")
             else:
-                self.debug_log.error("Maximum working time must be greater than 0")
+                self.logger.error("Maximum working time must be greater than 0")
         except ValueError:
-            self.debug_log.error("Invalid value for maximum working time. Usage: set_max_working_time <positive number>")
+            self.logger.error("Invalid value for maximum working time. Usage: set_max_working_time <positive number>")
         return True

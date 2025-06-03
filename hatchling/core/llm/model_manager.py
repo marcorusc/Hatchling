@@ -23,7 +23,7 @@ class ModelManager:
             debug_log (SessionDebugLog, optional): Logger for debugging messages. Defaults to None.
         """
         self.settings = settings
-        self.debug_log = debug_log
+        self.logger = debug_log
 
     async def check_availability(self, session: aiohttp.ClientSession, model_name: str) -> bool:
         """Check if a model is available in Ollama.
@@ -43,7 +43,7 @@ class ModelManager:
                 if response.status == 200:
                     data = await response.json()
                     available_models = [model["name"] for model in data.get("models", [])]
-                    self.debug_log.info(f"Available models: {available_models}")
+                    self.logger.info(f"Available models: {available_models}")
                     return model_name in available_models
                 else:
                     text = await response.text()
@@ -61,7 +61,7 @@ class ModelManager:
         Raises:
             Exception: If there is an error pulling the model.
         """
-        self.debug_log.info(f"Pulling model: {model_name}")
+        self.logger.info(f"Pulling model: {model_name}")
 
         try:
             async with session.post(
@@ -72,10 +72,10 @@ class ModelManager:
                 if response.status != 200:
                     text = await response.text()
                     error_msg = f"Failed to pull model: {response.status}, {text}"
-                    self.debug_log.error(error_msg)
+                    self.logger.error(error_msg)
                     raise Exception(error_msg)
 
-                self.debug_log.info(f"Started downloading {model_name}. This may take a while...")
+                self.logger.info(f"Started downloading {model_name}. This may take a while...")
                 async for line in response.content.iter_any():
                     if line:
                         try:
@@ -97,16 +97,16 @@ class ModelManager:
                                         percentage = (data["completed"] / data["total"]) * 100
                                         print(f"Progress: {percentage:.2f}%", flush=True)
                                 except json.JSONDecodeError:
-                                    self.debug_log.error(f"Received invalid JSON during model pull: {json_obj}")
+                                    self.logger.error(f"Received invalid JSON during model pull: {json_obj}")
                                 except Exception as e:
-                                    self.debug_log.error(f"Error processing model pull response: {e}\nData: {json_obj}")
+                                    self.logger.error(f"Error processing model pull response: {e}\nData: {json_obj}")
                         except Exception as e:
-                            self.debug_log.error(f"Error processing line: {e}")
+                            self.logger.error(f"Error processing line: {e}")
 
-                self.debug_log.info(f"Download of {model_name} completed.")
+                self.logger.info(f"Download of {model_name} completed.")
         except Exception as e:
             error_msg = f"Error pulling model: {e}"
-            self.debug_log.error(error_msg)
+            self.logger.error(error_msg)
             raise Exception(error_msg)
 
     async def check_ollama_service(self) -> Tuple[bool, str]:

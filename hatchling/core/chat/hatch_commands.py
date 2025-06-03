@@ -31,7 +31,7 @@ class HatchCommands:
         self.chat_session = chat_session
         self.settings = settings
         self.env_manager = env_manager
-        self.debug_log = debug_log
+        self.logger = debug_log
         
         self._register_commands()
         
@@ -187,7 +187,7 @@ class HatchCommands:
                 print(f"{current_marker}{env.get('name')}{description}")
                 
         except Exception as e:
-            self.debug_log.error(f"Error listing environments: {e}")
+            self.logger.error(f"Error listing environments: {e}")
             
         return True
     
@@ -208,7 +208,7 @@ class HatchCommands:
         parsed_args = self._parse_args(args, arg_defs)
 
         if 'name' not in parsed_args or not parsed_args['name']:
-            self.debug_log.error("Environment name is required.")
+            self.logger.error("Environment name is required.")
             self._print_command_help('hatch:env:create')
             return True
         
@@ -217,12 +217,12 @@ class HatchCommands:
             description = parsed_args.get('description', '')
             
             if self.env_manager.create_environment(name, description):                
-                self.debug_log.info(f"Environment created: {name}")
+                self.logger.info(f"Environment created: {name}")
             else:
-                self.debug_log.error(f"Failed to create environment: {name}")
+                self.logger.error(f"Failed to create environment: {name}")
                 
         except Exception as e:
-            self.debug_log.error(f"Error creating environment: {e}")
+            self.logger.error(f"Error creating environment: {e}")
             
         return True
     
@@ -242,7 +242,7 @@ class HatchCommands:
         parsed_args = self._parse_args(args, arg_defs)
 
         if 'name' not in parsed_args or not parsed_args['name']:
-            self.debug_log.error("Environment name is required.")
+            self.logger.error("Environment name is required.")
             self._print_command_help('hatch:env:remove')
             return True
         
@@ -250,12 +250,12 @@ class HatchCommands:
             name = parsed_args['name']
 
             if self.env_manager.remove_environment(name):
-                self.debug_log.info(f"Environment removed: {name}")
+                self.logger.info(f"Environment removed: {name}")
             else:
-                self.debug_log.error(f"Failed to remove environment: {name}")
+                self.logger.error(f"Failed to remove environment: {name}")
                 
         except Exception as e:
-            self.debug_log.error(f"Error removing environment: {e}")
+            self.logger.error(f"Error removing environment: {e}")
             
         return True
     
@@ -271,12 +271,12 @@ class HatchCommands:
         try:
             current_env = self.env_manager.get_current_environment()
             if current_env:
-                self.debug_log.info(f"Current environment: {current_env}")
+                self.logger.info(f"Current environment: {current_env}")
             else:
-                self.debug_log.info("No current environment set.")
+                self.logger.info("No current environment set.")
                 
         except Exception as e:
-            self.debug_log.error(f"Error getting current environment: {e}")
+            self.logger.error(f"Error getting current environment: {e}")
             
         return True
     
@@ -295,7 +295,7 @@ class HatchCommands:
         
         parsed_args = self._parse_args(args, arg_defs)
         if 'name' not in parsed_args or not parsed_args['name']:
-            self.debug_log.error(f"Environment name is required.")
+            self.logger.error(f"Environment name is required.")
             self._print_command_help('hatch:env:use')
             return True
         
@@ -303,7 +303,7 @@ class HatchCommands:
             name = parsed_args['name']
 
             if self.env_manager.set_current_environment(name):
-                self.debug_log.info(f"Current environment set to: {name}")
+                self.logger.info(f"Current environment set to: {name}")
 
                 # When changing the current environment, we must handle
                 # disconnecting from the previous environment's tools if any,
@@ -312,7 +312,7 @@ class HatchCommands:
                     
                     # Disconnection
                     self.chat_session.tool_executor.disconnect_tools()
-                    self.debug_log.info("Disconnected from previous environment's tools.")
+                    self.logger.info("Disconnected from previous environment's tools.")
 
                     # Get the new environment's entry points for the MCP servers
                     mcp_servers_url = self.env_manager.get_servers_entry_points(name)
@@ -321,15 +321,15 @@ class HatchCommands:
                         # Reconnect to the new environment's tools
                         connected = self.chat_session.initialize_mcp(mcp_servers_url)
                         if not connected:
-                            self.debug_log.error("Failed to connect to new environment's MCP servers. Tools not enabled.")
+                            self.logger.error("Failed to connect to new environment's MCP servers. Tools not enabled.")
                         else:
-                            self.debug_log.info("Connected to new environment's MCP servers successfully!")
+                            self.logger.info("Connected to new environment's MCP servers successfully!")
 
             else:
-                self.debug_log.error(f"Failed to set environment: {name}")
+                self.logger.error(f"Failed to set environment: {name}")
                 
         except Exception as e:
-            self.debug_log.error(f"Error setting current environment: {e}")
+            self.logger.error(f"Error setting current environment: {e}")
             
         return True
     
@@ -352,7 +352,7 @@ class HatchCommands:
         
         parsed_args = self._parse_args(args, arg_defs)
         if 'package_path_or_name' not in parsed_args or not parsed_args['package_path_or_name']:
-            self.debug_log.error("Package path or name is required.")
+            self.logger.error("Package path or name is required.")
             self._print_command_help('hatch:pkg:add')
             return True
         
@@ -364,12 +364,12 @@ class HatchCommands:
             refresh_registry = parsed_args.get('refresh-registry', False)
 
             if self.env_manager.add_package_to_environment(package, env, version, force_download, refresh_registry):
-                self.debug_log.info(f"Successfully added package: {package}")
+                self.logger.info(f"Successfully added package: {package}")
             else:
-                self.debug_log.error(f"Failed to add package: {package}")
+                self.logger.error(f"Failed to add package: {package}")
                 
         except Exception as e:
-            self.debug_log.error(f"Error adding package: {e}")
+            self.logger.error(f"Error adding package: {e}")
 
         return True
     
@@ -389,7 +389,7 @@ class HatchCommands:
         
         parsed_args = self._parse_args(args, arg_defs)
         if 'package_name' not in parsed_args or not parsed_args['package_name']:
-            self.debug_log.error("Package name is required.")
+            self.logger.error("Package name is required.")
             self._print_command_help('hatch:pkg:remove')
             return True
         
@@ -398,12 +398,12 @@ class HatchCommands:
             env = parsed_args.get('env')
 
             if self.env_manager.remove_package(package_name, env):
-                self.debug_log.info(f"Successfully removed package: {package_name}")
+                self.logger.info(f"Successfully removed package: {package_name}")
             else:
-                self.debug_log.error(f"Failed to remove package: {package_name}")
+                self.logger.error(f"Failed to remove package: {package_name}")
                 
         except Exception as e:
-            self.debug_log.error(f"Error removing package: {e}")
+            self.logger.error(f"Error removing package: {e}")
 
         return True
 
@@ -427,17 +427,17 @@ class HatchCommands:
             packages = self.env_manager.list_packages(env)
             if not packages:
                 env_name = env if env else "current environment"
-                self.debug_log.info(f"No packages found in {env_name}.")
+                self.logger.info(f"No packages found in {env_name}.")
                 return True
             
             env_name = env if env else "current environment"
-            self.debug_log.info(f"Listing {len(packages)} packages in {env_name}")
+            self.logger.info(f"Listing {len(packages)} packages in {env_name}")
             print(f"Packages in {env_name}:")
             for pkg in packages:
                 print(f"{pkg['name']} ({pkg['version']})  Hatch compliant: {pkg['hatch_compliant']} Source: {pkg['source']['uri']}  Location: {pkg['source']['path']}")
                 
         except Exception as e:
-            self.debug_log.error(f"Error listing packages: {e}")
+            self.logger.error(f"Error listing packages: {e}")
             
         return True
     
@@ -458,7 +458,7 @@ class HatchCommands:
         
         parsed_args = self._parse_args(args, arg_defs)
         if 'name' not in parsed_args or not parsed_args['name']:
-            self.debug_log.error("Package name is required.")
+            self.logger.error("Package name is required.")
             self._print_command_help('hatch:create')
             return True
         
@@ -473,10 +473,10 @@ class HatchCommands:
                 description=description
             )
             
-            self.debug_log.info(f"Package template created at: {package_dir}")
+            self.logger.info(f"Package template created at: {package_dir}")
                 
         except Exception as e:
-            self.debug_log.error(f"Error creating package template: {e}")
+            self.logger.error(f"Error creating package template: {e}")
             
         return True
     
@@ -495,7 +495,7 @@ class HatchCommands:
         
         parsed_args = self._parse_args(args, arg_defs)
         if 'package_dir' not in parsed_args or not parsed_args['package_dir']:
-            self.debug_log.error("Package directory is required.")
+            self.logger.error("Package directory is required.")
             self._print_command_help('hatch:validate')
             return True
         
@@ -506,16 +506,16 @@ class HatchCommands:
             is_valid, validation_results = self.env_manager.package_validator.validate_package(package_path)
             
             if is_valid:
-                self.debug_log.info(f"Package validation SUCCESSFUL: {package_path}")
+                self.logger.info(f"Package validation SUCCESSFUL: {package_path}")
             else:
-                self.debug_log.warning(f"Package validation FAILED: {package_path}")
+                self.logger.warning(f"Package validation FAILED: {package_path}")
                 if validation_results and isinstance(validation_results, dict):
                     for key, issues in validation_results.items():
-                        self.debug_log.warning(f"\n{key} issues:")
+                        self.logger.warning(f"\n{key} issues:")
                         for issue in issues:
-                            self.debug_log.warning(f"- {issue}")
+                            self.logger.warning(f"- {issue}")
 
         except Exception as e:
-            self.debug_log.error(f"Error validating package: {e}")
+            self.logger.error(f"Error validating package: {e}")
 
         return True
