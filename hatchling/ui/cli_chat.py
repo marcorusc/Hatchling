@@ -3,6 +3,11 @@ import aiohttp
 import logging
 from typing import Optional
 
+from prompt_toolkit import PromptSession, print_formatted_text as print_pt
+from prompt_toolkit.history import InMemoryHistory
+from prompt_toolkit.patch_stdout import patch_stdout
+from prompt_toolkit.formatted_text import FormattedText
+
 from hatchling.core.logging.logging_manager import logging_manager
 from hatchling.core.llm.model_manager import ModelManager
 from hatchling.core.llm.chat_session import ChatSession
@@ -14,7 +19,6 @@ from hatch import HatchEnvironmentManager
 
 class CLIChat:
     """Command-line interface for chat functionality."""
-    
     def __init__(self, settings: ChatSettings):
         """Initialize the CLI chat interface.
         
@@ -38,6 +42,9 @@ class CLIChat:
         # Chat session will be initialized during startup
         self.chat_session = None
         self.cmd_handler = None
+        
+        # Initialize prompt toolkit session with history
+        self.prompt_session = PromptSession(history=InMemoryHistory())
     
     async def initialize(self) -> bool:
         """Initialize the chat environment.
@@ -112,13 +119,15 @@ class CLIChat:
             if not await self.check_and_pull_model(session):
                 self.logger.error("Failed to ensure model availability")
                 return
-            
-            # Start the interactive chat loop
+              # Start the interactive chat loop
             while True:
                 try:
-                    # Get user input
+                    # Get user input with prompt_toolkit
                     status = "[Tools enabled]" if self.chat_session.tool_executor.tools_enabled else "[Tools disabled]"
-                    user_message = input(f"{status} You: ")
+                    
+                    # Use patch_stdout to prevent output interference
+                    with patch_stdout():
+                        user_message = await self.prompt_session.prompt_async(f"{status} You: ")
                     
                     # Process as command if applicable
                     is_command, should_continue = await self.cmd_handler.process_command(user_message)
@@ -131,18 +140,16 @@ class CLIChat:
                     if not user_message.strip():
                         # Skip empty input
                         continue
-                    
-                    # Send the query
-                    print("\nAssistant: ", end="", flush=True)
+                      # Send the query
+                    print_pt(FormattedText([('green', '\nAssistant: ')]), end='', flush=True)
                     await self.chat_session.send_message(user_message, session)
-                    print()  # Add an extra newline for readability
-                    
+                    print_pt('')  # Add an extra newline for readability
                 except KeyboardInterrupt:
-                    print("\nInterrupted. Ending chat session...")
+                    print_pt(FormattedText([('red', '\nInterrupted. Ending chat session...')]))
                     break
                 except Exception as e:
                     self.logger.error(f"Error: {e}")
-                    print(f"\nError: {e}")
+                    print_pt(FormattedText([('red', f'\nError: {e}')]))
     
     async def initialize_and_run(self) -> None:
         """Initialize the environment and run the interactive chat session."""
