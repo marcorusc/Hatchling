@@ -28,6 +28,7 @@ class LoggingManager:
             cls._instance = super(LoggingManager, cls).__new__(cls)
             cls._instance._initialized = False
         return cls._instance
+    
     def __init__(self):
         """Initialize the logging manager if not already initialized."""
         if self._initialized:
@@ -46,9 +47,6 @@ class LoggingManager:
         self.log_level = logging.INFO
         self.log_file = Path.home() / '.hatch' / 'logs' / 'hatchling.log'
     
-
-
-    
     def set_log_level(self, level: int) -> None:
         """Set the log level for all loggers and handlers.
         
@@ -64,15 +62,6 @@ class LoggingManager:
         # Set level for all handlers on root logger
         for handler in root_logger.handlers:
             handler.setLevel(self.log_level)
-        
-        # Then set level for all other loggers
-        for logger_name in logging.root.manager.loggerDict:
-            logger = logging.getLogger(logger_name)
-            logger.setLevel(self.log_level)
-            
-            # Also update handlers
-            for handler in logger.handlers:
-                handler.setLevel(self.log_level)
 
     def get_session(self, name: str, 
                    formatter: Optional[logging.Formatter] = None) -> SessionDebugLog:
