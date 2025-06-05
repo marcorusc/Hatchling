@@ -31,41 +31,121 @@ class BaseChatCommands:
         self.settings = settings
         self.env_manager = env_manager
         self.logger = debug_log
-
+        
         self._register_commands()
         
     def _register_commands(self) -> None:
         """Register all available chat commands with their handlers."""
-        # Commands that don't need async operations
-        self.sync_commands = {
-            'help': (self._cmd_help, "Display help for available commands"),
-            'exit': (self._cmd_exit, "End the chat session"),
-            'quit': (self._cmd_exit, "End the chat session"),
-            'clear': (self._cmd_clear, "Clear the chat history"),
-            'show_logs': (self._cmd_show_logs, "Display session logs. Usage: show_logs [n]"),
-            'set_log_level': (self._cmd_set_log_level, "Change log level (debug, info, warning, error, critical). Usage: set_log_level <level>"),
-            'set_max_tool_call_iterations': (self._cmd_set_max_iterations, 
-                                   "Set max tool call iterations. Usage: set_max_tool_call_iterations <n>"),
-            'set_max_working_time': (self._cmd_set_max_working_time, 
-                                   "Set max working time in seconds. Usage: set_max_working_time <seconds>"),
-        }
-        
-        # Commands that need async operations
-        self.async_commands = {
-            'enable_tools': (self._cmd_enable_tools, "Enable MCP tools"),
-            'disable_tools': (self._cmd_disable_tools, "Disable MCP tools"),
+        # New standardized command registration format
+        self.commands = {
+            'help': {
+                'handler': self._cmd_help,
+                'description': "Display help for available commands",
+                'is_async': False,
+                'args': {}
+            },
+            'exit': {
+                'handler': self._cmd_exit,
+                'description': "End the chat session",
+                'is_async': False,
+                'args': {}
+            },
+            'quit': {
+                'handler': self._cmd_exit,
+                'description': "End the chat session (alias for exit)",
+                'is_async': False,
+                'args': {}
+            },
+            'clear': {
+                'handler': self._cmd_clear,
+                'description': "Clear the chat history",
+                'is_async': False,
+                'args': {}
+            },
+            'show_logs': {
+                'handler': self._cmd_show_logs,
+                'description': "Display session logs",
+                'is_async': False,
+                'args': {
+                    'count': {
+                        'positional': True,
+                        'completer_type': 'suggestions',
+                        'values': ['10', '20', '50', '100'],
+                        'description': 'Number of log entries to show',
+                        'required': False
+                    }
+                }
+            },
+            'set_log_level': {
+                'handler': self._cmd_set_log_level,
+                'description': "Change log level",
+                'is_async': False,
+                'args': {
+                    'level': {
+                        'positional': True,
+                        'completer_type': 'suggestions',
+                        'values': ['debug', 'info', 'warning', 'error', 'critical'],
+                        'description': 'Log level name',
+                        'required': True
+                    }
+                }
+            },
+            'set_max_tool_call_iterations': {
+                'handler': self._cmd_set_max_iterations,
+                'description': "Set max tool call iterations",
+                'is_async': False,
+                'args': {
+                    'iterations': {
+                        'positional': True,
+                        'completer_type': 'none',
+                        'description': 'Number of iterations (positive integer)',
+                        'required': True
+                    }
+                }
+            },
+            'set_max_working_time': {
+                'handler': self._cmd_set_max_working_time,
+                'description': "Set max working time in seconds",
+                'is_async': False,
+                'args': {
+                    'seconds': {
+                        'positional': True,
+                        'completer_type': 'none',
+                        'description': 'Time in seconds (positive number)',
+                        'required': True
+                    }
+                }
+            },
+            'enable_tools': {
+                'handler': self._cmd_enable_tools,
+                'description': "Enable MCP tools",
+                'is_async': True,
+                'args': {}
+            },
+            'disable_tools': {
+                'handler': self._cmd_disable_tools,
+                'description': "Disable MCP tools",
+                'is_async': True,
+                'args': {}
+            }
         }
 
+        # Keep old format for backward compatibility
+        self.sync_commands = {}
+        self.async_commands = {}
+        
+        for cmd_name, cmd_info in self.commands.items():
+            if cmd_info['is_async']:
+                self.async_commands[cmd_name] = (cmd_info['handler'], cmd_info['description'])
+            else:                self.sync_commands[cmd_name] = (cmd_info['handler'], cmd_info['description'])
+    
     def print_commands_help(self) -> None:
         """Print help for all available chat commands."""
         print("\n=== Base Chat Commands ===")
 
-        # Combine all commands for display
-        all_commands = {**self.sync_commands, **self.async_commands}
-
         # Group commands by functionality and print them
-        for cmd_name, (_, description) in sorted(all_commands.items()):
-            print(f"Type '{cmd_name}' - {description}")
+        for cmd_name, cmd_info in sorted(self.commands.items()):
+            print(f"Type '{cmd_name}' - {cmd_info['description']}")
 
     def _cmd_help(self, _: str) -> bool:
         """
@@ -232,3 +312,11 @@ class BaseChatCommands:
         except ValueError:
             self.logger.error("Invalid value for maximum working time. Usage: set_max_working_time <positive number>")
         return True
+    
+    def get_command_metadata(self) -> dict:
+        """Get command metadata for autocompletion.
+        
+        Returns:
+            dict: Command metadata dictionary with enhanced format.
+        """
+        return self.commands

@@ -35,15 +35,20 @@ class ChatCommandHandler:
     
     def _register_commands(self) -> None:
         """Register all available chat commands with their handlers."""
-        # Commands that don't need async operations
-        self.sync_commands = {}
-        self.sync_commands.update(self.base_commands.sync_commands)
-        self.sync_commands.update(self.hatch_commands.sync_commands)
+        # Combine all commands from both handlers
+        self.commands = {}
+        self.commands.update(self.base_commands.get_command_metadata())
+        self.commands.update(self.hatch_commands.get_command_metadata())
         
-        # Commands that need async operations
+        # Keep old format for backward compatibility
+        self.sync_commands = {}
         self.async_commands = {}
-        self.async_commands.update(self.base_commands.async_commands)
-        self.async_commands.update(self.hatch_commands.async_commands)
+        
+        for cmd_name, cmd_info in self.commands.items():
+            if cmd_info['is_async']:
+                self.async_commands[cmd_name] = (cmd_info['handler'], cmd_info['description'])
+            else:
+                self.sync_commands[cmd_name] = (cmd_info['handler'], cmd_info['description'])
         
     def print_commands_help(self) -> None:
         """Print help for all available chat commands."""

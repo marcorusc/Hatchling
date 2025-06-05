@@ -37,52 +37,214 @@ class HatchCommands:
         
     def _register_commands(self) -> None:
         """Register all available Hatch package manager commands."""
-        # Commands that don't need async operations
-        self.sync_commands = {
+        # New standardized command registration format
+        self.commands = {
             # Environment commands
-            'hatch:env:list': (self._cmd_env_list, "List all available Hatch environments"),
-            'hatch:env:create': (self._cmd_env_create, "Create a new Hatch environment. Usage: hatch:env:create <name> [--description <description>]"),
-            'hatch:env:remove': (self._cmd_env_remove, "Remove a Hatch environment. Usage: hatch:env:remove <name>"),
-            'hatch:env:current': (self._cmd_env_current, "Show the current Hatch environment"),
-            'hatch:env:use': (self._cmd_env_use, "Set the current Hatch environment. Usage: hatch:env:use <name>"),
+            'hatch:env:list': {
+                'handler': self._cmd_env_list,
+                'description': "List all available Hatch environments",
+                'is_async': False,
+                'args': {}
+            },
+            'hatch:env:create': {
+                'handler': self._cmd_env_create,
+                'description': "Create a new Hatch environment",
+                'is_async': False,
+                'args': {
+                    'name': {
+                        'positional': True,
+                        'completer_type': 'none',
+                        'description': "Name for the new environment",
+                        'required': True
+                    },
+                    'description': {
+                        'positional': False,
+                        'completer_type': 'none',
+                        'description': "Description for the environment",
+                        'aliases': ['D'],
+                        'default': '',
+                        'required': False
+                    }
+                }
+            },
+            'hatch:env:remove': {
+                'handler': self._cmd_env_remove,
+                'description': "Remove a Hatch environment",
+                'is_async': False,
+                'args': {
+                    'name': {
+                        'positional': True,
+                        'completer_type': 'environment',
+                        'description': "Name of the environment to remove",
+                        'required': True
+                    }
+                }
+            },
+            'hatch:env:current': {
+                'handler': self._cmd_env_current,
+                'description': "Show the current Hatch environment",
+                'is_async': False,
+                'args': {}
+            },
+            'hatch:env:use': {
+                'handler': self._cmd_env_use,
+                'description': "Set the current Hatch environment",
+                'is_async': False,
+                'args': {
+                    'name': {
+                        'positional': True,
+                        'completer_type': 'environment',
+                        'description': "Name of the environment to use",
+                        'required': True
+                    }
+                }
+            },
             # Package commands
-            'hatch:pkg:add': (self._cmd_pkg_add, "Add a package to an environment. Usage: hatch:pkg:add <package_path_or_name> [--env <env_name>] [--version <version>] [--force-download] [--refresh-registry]"),
-            'hatch:pkg:remove': (self._cmd_pkg_remove, "Remove a package from an environment. Usage: hatch:pkg:remove <package_name> [--env <env_name>]"),
-            'hatch:pkg:list': (self._cmd_pkg_list, "List packages in an environment. Usage: hatch:pkg:list [--env <env_name>]"),
-
+            'hatch:pkg:add': {
+                'handler': self._cmd_pkg_add,
+                'description': "Add a package to an environment",
+                'is_async': False,
+                'args': {
+                    'package_path_or_name': {
+                        'positional': True,
+                        'completer_type': 'local_package',
+                        'description': "Path or name of the package to add",
+                        'required': True
+                    },
+                    'env': {
+                        'positional': False,
+                        'completer_type': 'environment',
+                        'description': "Environment to add the package to",
+                        'aliases': ['e'],
+                        'default': None,
+                        'required': False
+                    },
+                    'version': {
+                        'positional': False,
+                        'completer_type': 'none',
+                        'description': "Version of the package to add",
+                        'aliases': ['v'],
+                        'default': None,
+                        'required': False
+                    },
+                    'force-download': {
+                        'positional': False,
+                        'completer_type': 'none',
+                        'description': "Force download even if already available",
+                        'aliases': ['f'],
+                        'default': False,
+                        'is_flag': True,
+                        'required': False
+                    },
+                    'refresh-registry': {
+                        'positional': False,
+                        'completer_type': 'none',
+                        'description': "Refresh the registry before installing",
+                        'aliases': ['r'],
+                        'default': False,
+                        'is_flag': True,
+                        'required': False
+                    }
+                }
+            },
+            'hatch:pkg:remove': {
+                'handler': self._cmd_pkg_remove,
+                'description': "Remove a package from an environment",
+                'is_async': False,
+                'args': {
+                    'package_name': {
+                        'positional': True,
+                        'completer_type': 'package',
+                        'description': "Name of the package to remove",
+                        'required': True
+                    },
+                    'env': {
+                        'positional': False,
+                        'completer_type': 'environment',
+                        'description': "Environment to remove the package from",
+                        'aliases': ['e'],
+                        'default': None,
+                        'required': False
+                    }
+                }
+            },
+            'hatch:pkg:list': {
+                'handler': self._cmd_pkg_list,
+                'description': "List packages in an environment",
+                'is_async': False,
+                'args': {
+                    'env': {
+                        'positional': False,
+                        'completer_type': 'environment',
+                        'description': "Environment to list packages from",
+                        'aliases': ['e'],
+                        'default': None,
+                        'required': False
+                    }
+                }
+            },
             # Package creation command
-            'hatch:create': (self._cmd_create_package, "Create a new package template. Usage: hatch:create <name> [--dir <dir>] [--description <description>]"),
-
+            'hatch:create': {
+                'handler': self._cmd_create_package,
+                'description': "Create a new package template",
+                'is_async': False,
+                'args': {
+                    'name': {
+                        'positional': True,
+                        'completer_type': 'none',
+                        'description': "Name of the package to create",
+                        'required': True
+                    },
+                    'dir': {
+                        'positional': False,
+                        'completer_type': 'path',
+                        'description': "Directory to create the package in",
+                        'aliases': ['d'],
+                        'default': '.',
+                        'required': False
+                    },
+                    'description': {
+                        'positional': False,
+                        'completer_type': 'none',
+                        'description': "Description of the package",
+                        'aliases': ['D'],
+                        'default': '',
+                        'required': False
+                    }
+                }
+            },
             # Package validation command
-            'hatch:validate': (self._cmd_validate_package, "Validate a package. Usage: hatch:validate <package_dir>"),
-        }
+            'hatch:validate': {
+                'handler': self._cmd_validate_package,
+                'description': "Validate a package",
+                'is_async': False,
+                'args': {
+                    'package_dir': {
+                        'positional': True,
+                        'completer_type': 'path',
+                        'description': "Directory of the package to validate",
+                        'required': True
+                    }
+                }
+            }        }
 
-        # No async commands for now, but could be added if needed
-        self.async_commands = {}
-    
     def print_commands_help(self) -> None:
         """Print help for all available chat commands."""
         print("\n=== Hatch Chat Commands ===")
 
-        # Combine all commands for display
-        all_commands = {**self.sync_commands, **self.async_commands}
-
         # Group commands by functionality and print them
-        for cmd_name, (_, description) in sorted(all_commands.items()):
-            print(f"Type '{cmd_name}' - {description}")
-
+        for cmd_name, cmd_info in sorted(self.commands.items()):
+            print(f"Type '{cmd_name}' - {cmd_info['description']}")
+    
     def _print_command_help(self, command: str) -> None:
         """Print help for a specific command.
         
         Args:
             command (str): The command to print help for.
         """
-        if command in self.sync_commands:
-            _, description = self.sync_commands[command]
-            print(f"{command}: {description}")
-        elif command in self.async_commands:
-            _, description = self.async_commands[command]
-            print(f"{command}: {description}")
+        if command in self.commands:
+            cmd_info = self.commands[command]
+            print(f"{command}: {cmd_info['description']}")
         else:
             print(f"No help available for command: {command}")
 
@@ -163,6 +325,14 @@ class HatchCommands:
                 i += 1
         
         return result
+    
+    def get_command_metadata(self):
+        """Get metadata for all registered commands for autocompletion.
+        
+        Returns:
+            dict: Dictionary containing command metadata with the new standardized format
+        """
+        return self.commands
     
     def _cmd_env_list(self, _: str) -> bool:
         """List all available Hatch environments.
