@@ -11,29 +11,14 @@ from hatchling.core.logging.session_debug_log import SessionDebugLog
 from hatchling.core.logging.logging_manager import logging_manager
 from hatchling.mcp_utils.manager import mcp_manager
 from hatchling.config.settings import ChatSettings
+from hatchling.core.chat.abstract_commands import AbstractCommands
 
 from hatch import HatchEnvironmentManager
 
 
-class BaseChatCommands:
+class BaseChatCommands(AbstractCommands):
     """Handles processing of command inputs in the chat interface."""
 
-    def __init__(self, chat_session, settings: ChatSettings, env_manager: HatchEnvironmentManager, debug_log: SessionDebugLog):
-        """Initialize the command handler.
-        
-        Args:
-            chat_session: The chat session this handler is associated with.
-            settings (ChatSettings): The chat settings to use.
-            env_manager (HatchEnvironmentManager): The Hatch environment manager.
-            debug_log (SessionDebugLog): Logger for command operations.
-        """
-        self.chat_session = chat_session
-        self.settings = settings
-        self.env_manager = env_manager
-        self.logger = debug_log
-        
-        self._register_commands()
-        
     def _register_commands(self) -> None:
         """Register all available chat commands with their handlers."""
         # New standardized command registration format
@@ -127,8 +112,7 @@ class BaseChatCommands:
                 'description': "Disable MCP tools",
                 'is_async': True,
                 'args': {}
-            }
-        }
+            }        }
 
         # Keep old format for backward compatibility
         self.sync_commands = {}
@@ -137,15 +121,15 @@ class BaseChatCommands:
         for cmd_name, cmd_info in self.commands.items():
             if cmd_info['is_async']:
                 self.async_commands[cmd_name] = (cmd_info['handler'], cmd_info['description'])
-            else:                self.sync_commands[cmd_name] = (cmd_info['handler'], cmd_info['description'])
+            else:
+                self.sync_commands[cmd_name] = (cmd_info['handler'], cmd_info['description'])
     
     def print_commands_help(self) -> None:
         """Print help for all available chat commands."""
         print("\n=== Base Chat Commands ===")
 
-        # Group commands by functionality and print them
-        for cmd_name, cmd_info in sorted(self.commands.items()):
-            print(f"Type '{cmd_name}' - {cmd_info['description']}")
+        #Call base class method to print help
+        super().print_commands_help()
 
     def _cmd_help(self, _: str) -> bool:
         """
@@ -312,11 +296,3 @@ class BaseChatCommands:
         except ValueError:
             self.logger.error("Invalid value for maximum working time. Usage: set_max_working_time <positive number>")
         return True
-    
-    def get_command_metadata(self) -> dict:
-        """Get command metadata for autocompletion.
-        
-        Returns:
-            dict: Command metadata dictionary with enhanced format.
-        """
-        return self.commands

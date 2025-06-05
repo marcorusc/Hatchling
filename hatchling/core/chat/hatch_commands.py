@@ -10,31 +10,16 @@ from pathlib import Path
 
 from hatchling.core.logging.session_debug_log import SessionDebugLog
 from hatchling.config.settings import ChatSettings
+from hatchling.core.chat.abstract_commands import AbstractCommands
 
 # Import Hatch components - assumes Hatch is installed or available in the Python path
 from hatch import HatchEnvironmentManager
 from hatch import create_package_template
 
 
-class HatchCommands:
+class HatchCommands(AbstractCommands):
     """Handles Hatch package manager commands in the chat interface."""
 
-    def __init__(self, chat_session, settings: ChatSettings, env_manager: HatchEnvironmentManager, debug_log: SessionDebugLog):
-        """Initialize the Hatch command handler.
-        
-        Args:
-            chat_session: The chat session this handler is associated with.
-            settings (ChatSettings): The chat settings to use.
-            env_manager (HatchEnvironmentManager): The Hatch environment manager.
-            debug_log (SessionDebugLog): Logger for command operations.
-        """
-        self.chat_session = chat_session
-        self.settings = settings
-        self.env_manager = env_manager
-        self.logger = debug_log
-        
-        self._register_commands()
-        
     def _register_commands(self) -> None:
         """Register all available Hatch package manager commands."""
         # New standardized command registration format
@@ -231,108 +216,8 @@ class HatchCommands:
     def print_commands_help(self) -> None:
         """Print help for all available chat commands."""
         print("\n=== Hatch Chat Commands ===")
-
-        # Group commands by functionality and print them
-        for cmd_name, cmd_info in sorted(self.commands.items()):
-            print(f"Type '{cmd_name}' - {cmd_info['description']}")
-    
-    def _print_command_help(self, command: str) -> None:
-        """Print help for a specific command.
         
-        Args:
-            command (str): The command to print help for.
-        """
-        if command in self.commands:
-            cmd_info = self.commands[command]
-            print(f"{command}: {cmd_info['description']}")
-        else:
-            print(f"No help available for command: {command}")
-
-    def _parse_args(self, args_str: str, arg_defs: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
-        """Parse command arguments from a string.
-        
-        Args:
-            args_str (str): The argument string to parse.
-            arg_defs (Dict): Definitions of arguments to parse, including default values.
-            
-        Returns:
-            Dict[str, Any]: Parsed arguments.
-        """
-        result = {}
-        
-        # Initialize with defaults
-        for arg_name, arg_def in arg_defs.items():
-            if 'default' in arg_def:
-                result[arg_name] = arg_def['default']
-        
-        # Split by spaces, but respect quoted strings
-        parts = []
-        current_part = ""
-        in_quotes = False
-        quote_char = None
-        
-        for char in args_str:
-            if char in ['"', "'"]:
-                if not in_quotes:
-                    in_quotes = True
-                    quote_char = char
-                elif char == quote_char:
-                    in_quotes = False
-                    quote_char = None
-                else:
-                    current_part += char
-            elif char.isspace() and not in_quotes:
-                if current_part:
-                    parts.append(current_part)
-                    current_part = ""
-            else:
-                current_part += char
-                
-        if current_part:
-            parts.append(current_part)
-        
-        # Process positional and named arguments
-        positionals = [arg_name for arg_name, arg_def in arg_defs.items() if arg_def.get('positional', False)]
-        positional_idx = 0
-        
-        i = 0
-        while i < len(parts):
-            part = parts[i]
-            
-            # Handle named arguments (--arg or -a style)
-            if part.startswith('--') or (part.startswith('-') and len(part) == 2):
-                arg_name = part.lstrip('-')
-                
-                # Find the actual argument name if it's an alias
-                for name, arg_def in arg_defs.items():
-                    if arg_name == name or arg_name in arg_def.get('aliases', []):
-                        arg_name = name
-                        break
-                
-                # Check if this argument expects a value
-                if i + 1 < len(parts) and not parts[i+1].startswith('-'):
-                    result[arg_name] = parts[i+1]
-                    i += 2
-                else:
-                    # Flag argument (boolean)
-                    result[arg_name] = True
-                    i += 1
-            else:
-                # Handle positional arguments
-                if positional_idx < len(positionals):
-                    result[positionals[positional_idx]] = part
-                    positional_idx += 1
-                i += 1
-        
-        return result
-    
-    def get_command_metadata(self):
-        """Get metadata for all registered commands for autocompletion.
-        
-        Returns:
-            dict: Dictionary containing command metadata with the new standardized format
-        """
-        return self.commands
+        super().print_commands_help()
     
     def _cmd_env_list(self, _: str) -> bool:
         """List all available Hatch environments.
