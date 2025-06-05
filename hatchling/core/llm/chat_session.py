@@ -18,7 +18,7 @@ class ChatSession:
             settings (ChatSettings): Configuration settings for the chat session.
         """
         self.settings = settings
-        self.model_name = settings.ollama_model
+        self.model_name = settings.ollama_model if settings.llm_provider == "ollama" else settings.openai_model
         # Get session-specific logger from the manager
         self.logger = logging_manager.get_session(f"ChatSession-{self.model_name}",
                                   formatter=logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))

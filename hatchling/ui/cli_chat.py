@@ -93,14 +93,19 @@ class CLIChat:
         Returns:
             bool: True if initialization was successful.
         """
-        # Check if Ollama service is available
-        available, message = await self.model_manager.check_ollama_service()
-        if not available:
-            self.logger.error(message)
-            self.logger.error(f"Please ensure the Ollama service is running at {self.settings.ollama_api_url} before running this script.")
-            return False
-        
-        self.logger.info(message)
+        if self.settings.llm_provider == "ollama":
+            # Check if Ollama service is available
+            available, message = await self.model_manager.check_ollama_service()
+            if not available:
+                self.logger.error(message)
+                self.logger.error(
+                    f"Please ensure the Ollama service is running at {self.settings.ollama_api_url} before running this script."
+                )
+                return False
+
+            self.logger.info(message)
+        else:
+            self.logger.info("Using OpenAI ChatGPT provider")
         
         # Check if MCP server is available
         self.logger.info("Checking MCP server availability...")
@@ -138,10 +143,13 @@ class CLIChat:
         Returns:
             bool: True if model is available (either already or after pulling).
         """
+        if self.settings.llm_provider != "ollama":
+            return True
+
         try:
             # Check if model is available
             is_model_available = await self.model_manager.check_availability(session, self.settings.ollama_model)
-            
+
             if is_model_available:
                 self.logger.info(f"Model {self.settings.ollama_model} is already pulled.")
                 return True
@@ -158,7 +166,8 @@ class CLIChat:
             self.logger.error("Chat session not initialized. Call initialize() first.")
             return
         
-        self.logger.info(f"Starting interactive chat with {self.settings.ollama_model}")
+        model_name = self.settings.ollama_model if self.settings.llm_provider == "ollama" else self.settings.openai_model
+        self.logger.info(f"Starting interactive chat with {model_name}")
         print_pt(FormattedText([('cyan bold', '\n=== Hatchling Chat Interface ===\n')]))
         self.cmd_handler.print_commands_help()
         
