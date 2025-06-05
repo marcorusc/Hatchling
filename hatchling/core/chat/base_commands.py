@@ -188,8 +188,6 @@ class BaseChatCommands:
         if self.chat_session.tool_executor.tools_enabled:
             await mcp_manager.disconnect_all()
             self.chat_session.tool_executor.tools_enabled = False
-            # Clear messages that might have tool-specific content
-            self.chat_session.history.clear()
             self.logger.info("MCP tools disabled successfully!")
         else:
             self.logger.warning("MCP tools are already disabled.")
