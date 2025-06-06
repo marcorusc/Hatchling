@@ -7,6 +7,9 @@ for the chat interface, including help, exit, log control and tool management.
 import logging
 from typing import Tuple
 
+from prompt_toolkit import print_formatted_text
+from prompt_toolkit.formatted_text import FormattedText
+
 from hatchling.core.logging.session_debug_log import SessionDebugLog
 from hatchling.core.logging.logging_manager import logging_manager
 from hatchling.mcp_utils.manager import mcp_manager
@@ -126,10 +129,20 @@ class BaseChatCommands(AbstractCommands):
     
     def print_commands_help(self) -> None:
         """Print help for all available chat commands."""
-        print("\n=== Base Chat Commands ===")
+        print_formatted_text(FormattedText([
+            ('class:header', "\n=== Base Chat Commands ===\n")
+        ]), style=self.style)
 
-        #Call base class method to print help
+        # Call parent class method to print formatted commands
         super().print_commands_help()
+
+    def format_command(self, cmd_name: str, cmd_info: dict, group: str = 'base') -> list:
+        """Format base commands with custom styling."""
+        return [
+            (f'class:command.name.{group}', f"{cmd_name}"),
+            ('', ' - '),
+            ('class:command.description', f"{cmd_info['description']}")
+        ]
 
     def _cmd_help(self, _: str) -> bool:
         """
