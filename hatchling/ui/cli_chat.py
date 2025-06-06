@@ -13,6 +13,7 @@ from hatchling.core.logging.logging_manager import logging_manager
 from hatchling.core.llm.model_manager import ModelManager
 from hatchling.core.llm.chat_session import ChatSession
 from hatchling.core.chat.chat_command_handler import ChatCommandHandler
+from hatchling.core.chat.command_completion import CommandCompleterFactory
 from hatchling.config.settings import ChatSettings
 from hatchling.mcp_utils.manager import mcp_manager
 # Import removed - using centralized logging system
@@ -91,6 +92,9 @@ class CLIChat:
         # Initialize command handler
         self.cmd_handler = ChatCommandHandler(self.chat_session, self.settings, self.env_manager, self.logger)
         
+        # Initialize command completer
+        self.command_completer = CommandCompleterFactory.create_completer(self.cmd_handler)
+        
         return True
     
     async def check_and_pull_model(self, session: aiohttp.ClientSession) -> bool:
@@ -145,10 +149,12 @@ class CLIChat:
                         status_style,
                         ('', ' You: ')
                     ]
-                    
-                    # Use patch_stdout to prevent output interference
+                      # Use patch_stdout to prevent output interference
                     with patch_stdout():
-                        user_message = await self.prompt_session.prompt_async(FormattedText(prompt_message))
+                        user_message = await self.prompt_session.prompt_async(
+                            FormattedText(prompt_message),
+                            completer=self.command_completer
+                        )
                     
                     # Process as command if applicable
                     is_command, should_continue = await self.cmd_handler.process_command(user_message)
