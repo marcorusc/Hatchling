@@ -16,11 +16,6 @@ COPY . /app
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-# Accept build arguments for user configuration (no defaults needed here)
-ARG USER_ID
-ARG GROUP_ID
-ARG USER_NAME
-
 # Set working directory
 WORKDIR /app
 

@@ -3,10 +3,6 @@ services:
     image: hatchling
     build:
       context: ..
-      args:
-        USER_ID: ${USER_ID:-1000}
-        GROUP_ID: ${GROUP_ID:-1000}
-        USER_NAME: ${USER_NAME:-appuser}
       dockerfile: ./docker/Dockerfile
     volumes:
       - ${HATCH_HOST_CACHE_DIR}:/home/${USER_NAME:-appuser}/.hatch
@@ -25,10 +21,6 @@ services:
     image: hatchling_dev
     build:
       context: ..
-      args:
-        USER_ID: ${USER_ID:-1000}
-        GROUP_ID: ${GROUP_ID:-1000}
-        USER_NAME: ${USER_NAME:-appuser}
       dockerfile: ./docker/Dockerfile
     volumes:
       - ${HATCH_HOST_CACHE_DIR}:/home/${USER_NAME:-appuser}/.hatch
