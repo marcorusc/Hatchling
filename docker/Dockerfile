@@ -12,18 +12,17 @@ ENV PYTHONUNBUFFERED=1
 # Copy the current directory contents into the container at /app
 COPY . /app
 
-# Copy the entrypoint script
-COPY docker/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
-
 # Set working directory
 WORKDIR /app
+
+# Copy the entrypoint script
+RUN chmod +x ./docker/entrypoint.sh
 
 # Install the package
 RUN pip install -e .
 
 # Use the entrypoint script (runs as root initially to handle permissions)
-ENTRYPOINT ["/entrypoint.sh"]
+ENTRYPOINT ["./docker/entrypoint.sh"]
 
 # Default command
 CMD ["hatchling"]
