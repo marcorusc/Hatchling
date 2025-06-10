@@ -56,12 +56,19 @@ class ToolExecutionManager:
         return self.tools_enabled
     
     def get_tools_for_payload(self) -> List[Dict[str, Any]]:
-        """Get the list of tools to include in the LLM API payload.
-        
-        Returns:
-            List[Dict[str, Any]]: List of tool definitions for the API payload.
-        """
-        return mcp_manager.get_ollama_tools()
+        """Get the list of tools/functions for the LLM API payload, in the correct format for the provider."""
+        if self.settings.llm_provider == "openai":
+            # Return OpenAI function format (list of function schemas)
+            tools = mcp_manager.get_ollama_tools()
+            openai_functions = []
+            for tool in tools:
+                if tool.get("type") == "function" and "function" in tool:
+                    openai_functions.append(tool["function"])
+                else:
+                    openai_functions.append(tool)
+            return openai_functions
+        else:
+            return mcp_manager.get_ollama_tools()
 
     def reset_for_new_query(self, query: str) -> None:
         """Reset tool execution state for a new user query.
