@@ -12,6 +12,13 @@ ENV PYTHONUNBUFFERED=1
 # Copy the current directory contents into the container at /app
 COPY . /app
 
+RUN apt-get install -y graphviz libgraphviz-dev
+RUN python -m pip install --upgrade pip wheel twine build
+
+RUN apt-get install -y build-essential && pip install nekomata && apt remove -y --purge build-essential
+
+RUN pip install maboss conda-package-handling && python -m maboss_setup
+
 # Set working directory
 WORKDIR /app
 

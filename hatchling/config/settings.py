@@ -10,9 +10,9 @@ class ChatSettings:
                  ollama_api_url: str = os.environ.get("OLLAMA_HOST_API", "http://localhost:11434/api"),
                  ollama_model: str = os.environ.get("OLLAMA_MODEL", "mistral-small3.1"),
                  openai_api_url: str = os.environ.get("OPENAI_API_URL", "https://api.openai.com/v1"),
-                 openai_model: str = os.environ.get("OPENAI_MODEL", "gpt-3.5-turbo"),
-                 openai_api_key: str = os.environ.get("OPENAI_API_KEY", ""),
-                 llm_provider: str = os.environ.get("LLM_PROVIDER", "ollama"),
+                 openai_model: str = os.environ.get("CHATGPT_MODEL", "gpt-4.1"),
+                 openai_api_key: str = os.environ.get("CHATGPT_API_KEY", ""),
+                 llm_provider: str = os.environ.get("LLM_PROVIDER", "openai"),
                  hatch_envs_dir: str = os.environ.get("HATCH_ENVS_DIR", Path.home() / ".hatch" / "envs"),
                  max_tool_call_iteration: int = 5,
                  max_working_time: float = 30.0):
@@ -38,6 +38,7 @@ class ChatSettings:
         self.openai_api_url = openai_api_url
         self.openai_model = openai_model
         self.openai_api_key = openai_api_key
+        self.logger.info(self.openai_api_key)
         self.llm_provider = llm_provider.lower()
 
         # If hatch_envs_dir is:
