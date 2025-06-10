@@ -6,7 +6,11 @@ and shared functionality for all command handlers in the chat interface.
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Dict, Any
+from typing import Dict, Any, Optional
+
+from prompt_toolkit import print_formatted_text
+from prompt_toolkit.formatted_text import FormattedText
+from prompt_toolkit.styles import Style
 
 from hatchling.core.logging.session_debug_log import SessionDebugLog
 from hatchling.config.settings import ChatSettings
@@ -21,8 +25,7 @@ class AbstractCommands(ABC):
     command handlers should implement. Subclasses must implement the abstract
     methods to define their specific commands and behavior.
     """
-
-    def __init__(self, chat_session, settings: ChatSettings, env_manager: HatchEnvironmentManager, debug_log: SessionDebugLog):
+    def __init__(self, chat_session, settings: ChatSettings, env_manager: HatchEnvironmentManager, debug_log: SessionDebugLog, style: Optional[Style] = None):
         """Initialize the command handler.
         
         Args:
@@ -30,11 +33,19 @@ class AbstractCommands(ABC):
             settings (ChatSettings): The chat settings to use.
             env_manager (HatchEnvironmentManager): The Hatch environment manager.
             debug_log (SessionDebugLog): Logger for command operations.
+            style (Optional[Style]): Style for formatting command output.
         """
         self.chat_session = chat_session
         self.settings = settings
         self.env_manager = env_manager
         self.logger = debug_log
+        
+        # Set up styling - use provided style or create default
+        self.style = style or Style.from_dict({
+            'command.name': 'bold',
+            'command.description': '',
+            'header': 'bold underline',
+        })
         
         # Initialize the commands dictionary
         self.commands = {}
@@ -65,8 +76,7 @@ class AbstractCommands(ABC):
                 self.async_commands[cmd_name] = (cmd_info['handler'], cmd_info['description'])
             else:
                 self.sync_commands[cmd_name] = (cmd_info['handler'], cmd_info['description'])
-
-    @abstractmethod
+    
     def print_commands_help(self) -> None:
         """Print help for all available commands.
         
@@ -75,8 +85,41 @@ class AbstractCommands(ABC):
         """
         # Group commands by functionality and print them
         for cmd_name, cmd_info in sorted(self.commands.items()):
-            print(f"Type '{cmd_name}' - {cmd_info['description']}")
+            formatted_cmd = self.format_command(cmd_name, cmd_info)
+            print_formatted_text(FormattedText(formatted_cmd), style=self.style)
+            
+            # Show arguments if available
+            if cmd_info.get('args'):
+                for arg_name, arg_def in cmd_info['args'].items():
+                    arg_text = [
+                        ('', '\t'),
+                        ('class:command.args', arg_name),
+                        ('', ': '),
+                        ('class:command.description', arg_def.get('description', 'No description'))
+                    ]
+                    if arg_def.get('required'):
+                        arg_text.insert(2, ('class:command.args', ' (required)'))
+                    print_formatted_text(FormattedText(arg_text), style=self.style)
 
+    def format_command(self, cmd_name: str, cmd_info: Dict[str, Any], group: str = 'default') -> list:
+        """Format a command as FormattedText.
+        
+        Can be overridden by subclasses to customize formatting.
+        
+        Args:
+            cmd_name (str): Command name
+            cmd_info (dict): Command information dictionary
+            group (str): Command group name for styling
+            
+        Returns:
+            list: FormattedText fragments
+        """
+        return [
+            ('class:command.name', f"{cmd_name}"),
+            ('', ' - '),
+            ('class:command.description', f"{cmd_info['description']}")
+        ]
+    
     def _print_command_help(self, command: str) -> None:
         """Print help for a specific command.
         
@@ -85,9 +128,27 @@ class AbstractCommands(ABC):
         """
         if command in self.commands:
             cmd_info = self.commands[command]
-            print(f"{command}: {cmd_info['description']}")
+            formatted_cmd = self.format_command(command, cmd_info)
+            print_formatted_text(FormattedText([('class:header', 'Command usage:')]), style=self.style)
+            print_formatted_text(FormattedText(formatted_cmd), style=self.style)
+            
+            # Show arguments if available
+            if cmd_info.get('args'):
+                
+                for arg_name, arg_def in cmd_info['args'].items():
+                    arg_text = [
+                        ('', '\t'),
+                        ('class:command.args', arg_name),
+                        ('', ': '),
+                        ('class:command.description', arg_def.get('description', 'No description'))
+                    ]
+                    if arg_def.get('required'):
+                        arg_text.insert(2, ('class:command.args', ' (required)'))
+                    print_formatted_text(FormattedText(arg_text), style=self.style)
         else:
-            print(f"No help available for command: {command}")
+            print_formatted_text(FormattedText([
+                ('class:command.description', f"No help available for command: {command}")
+            ]), style=self.style)
 
     def _parse_args(self, args_str: str, arg_defs: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
         """Parse command arguments from a string.

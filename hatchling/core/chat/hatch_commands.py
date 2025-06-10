@@ -8,6 +8,9 @@ import logging
 from typing import Tuple, Dict, Any, List, Optional
 from pathlib import Path
 
+from prompt_toolkit import print_formatted_text
+from prompt_toolkit.formatted_text import FormattedText
+
 from hatchling.core.logging.session_debug_log import SessionDebugLog
 from hatchling.config.settings import ChatSettings
 from hatchling.core.chat.abstract_commands import AbstractCommands
@@ -211,13 +214,24 @@ class HatchCommands(AbstractCommands):
                         'required': True
                     }
                 }
-            }        }
-
+            }
+        }
+    
     def print_commands_help(self) -> None:
         """Print help for all available chat commands."""
-        print("\n=== Hatch Chat Commands ===")
+        print_formatted_text(FormattedText([
+            ('class:header', "\n=== Hatch Chat Commands ===\n")
+        ]), style=self.style)
         
         super().print_commands_help()
+
+    def format_command(self, cmd_name: str, cmd_info: Dict[str, Any], group: str = 'hatch') -> list:
+        """Format Hatch commands with custom styling."""
+        return [
+            (f'class:command.name.{group}', f"{cmd_name}"),
+            ('', ' - '),
+            ('class:command.description', f"{cmd_info['description']}")
+        ]
     
     def _cmd_env_list(self, _: str) -> bool:
         """List all available Hatch environments.
