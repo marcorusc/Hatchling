@@ -1,6 +1,8 @@
 import aiohttp
 import logging
 import asyncio
+import subprocess
+import re
 from pathlib import Path
 from typing import Optional
 
@@ -93,19 +95,35 @@ class CLIChat:
         Returns:
             bool: True if initialization was successful.
         """
-        if self.settings.llm_provider == "ollama":
-            # Check if Ollama service is available
+        provider = self.settings.get_active_provider()
+        model = self.settings.get_active_model()
+        print_pt(FormattedText([
+            ('yellow bold', f"\nUsing LLM provider: {provider} (model: {model})\n")
+        ]))
+        if provider == "ollama":
             available, message = await self.model_manager.check_ollama_service()
             if not available:
                 self.logger.error(message)
                 self.logger.error(
                     f"Please ensure the Ollama service is running at {self.settings.ollama_api_url} before running this script."
                 )
+                print_pt(FormattedText([('red bold', message)]))
                 return False
-
             self.logger.info(message)
+            print_pt(FormattedText([('green', message)]))
+        elif provider == "openai":
+            available, message = await self.model_manager.check_openai_service()
+            if not available:
+                self.logger.error(message)
+                print_pt(FormattedText([('red bold', message)]))
+                return False
+            self.logger.info(message)
+            print_pt(FormattedText([('green', message)]))
         else:
-            self.logger.info("Using OpenAI ChatGPT provider")
+            msg = f"Unknown LLM provider: {provider}"
+            self.logger.error(msg)
+            print_pt(FormattedText([('red bold', msg)]))
+            return False
         
         # Check if MCP server is available
         self.logger.info("Checking MCP server availability...")
@@ -160,6 +178,20 @@ class CLIChat:
             self.logger.error(f"Error checking/pulling model: {e}")
             return False
     
+    def try_open_image(self, message: str):
+        """
+        If the message contains a path to a PNG image, try to open it with the default viewer.
+        """
+        match = re.search(r'([\\w./-]+\\.png)', message)
+        if match:
+            image_path = match.group(1)
+            if Path(image_path).exists():
+                try:
+                    subprocess.Popen(['xdg-open', image_path])
+                    self.logger.info(f"Opened image: {image_path}")
+                except Exception as e:
+                    self.logger.warning(f"Could not open image: {e}")
+
     async def start_interactive_session(self) -> None:
         """Run an interactive chat session with message history."""
         if not self.chat_session or not self.cmd_handler:
@@ -213,6 +245,9 @@ class CLIChat:
                       # Send the query
                     print_pt(FormattedText([('green', '\nAssistant: ')]), end='', flush=True)
                     await self.chat_session.send_message(user_message, session)
+                    # Try to open image if the assistant's last response contains a PNG path
+                    if hasattr(self.chat_session, 'last_response_text'):
+                        self.try_open_image(self.chat_session.last_response_text)
                     print_pt('')  # Add an extra newline for readability
                 except KeyboardInterrupt:
                     print_pt(FormattedText([('red', '\nInterrupted. Ending chat session...')]))
