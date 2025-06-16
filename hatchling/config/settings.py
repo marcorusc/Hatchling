@@ -15,7 +15,7 @@ class ChatSettings:
                  llm_provider: str = os.environ.get("LLM_PROVIDER", "openai"),
                  hatch_envs_dir: str = os.environ.get("HATCH_ENVS_DIR", Path.home() / ".hatch" / "envs"),
                  max_tool_call_iteration: int = 5,
-                 max_working_time: float = 30.0):
+                 max_working_time: float = 3000.0):
         """Initialize chat settings with configurable parameters.
         
         Args:
@@ -61,3 +61,16 @@ class ChatSettings:
             f"Max tool call iterations: {self.max_tool_call_iteration}, Max working time: {self.max_working_time} seconds"
         )
         self.logger.info(f"Hatch environments directory: {self.hatch_envs_dir}")
+
+    def get_active_model(self):
+        """Return the currently active model name based on provider."""
+        if self.llm_provider == "ollama":
+            return self.ollama_model
+        elif self.llm_provider == "openai":
+            return self.openai_model
+        else:
+            return None
+
+    def get_active_provider(self):
+        """Return the currently active LLM provider."""
+        return self.llm_provider
