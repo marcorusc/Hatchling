@@ -12,7 +12,7 @@ ENV PYTHONUNBUFFERED=1
 # Copy the current directory contents into the container at /app
 COPY . /app
 
-RUN apt-get install -y graphviz libgraphviz-dev
+RUN apt-get update && apt-get install -y graphviz libgraphviz-dev
 RUN python -m pip install --upgrade pip wheel twine build
 
 RUN apt-get install -y build-essential && pip install nekomata && apt remove -y --purge build-essential
