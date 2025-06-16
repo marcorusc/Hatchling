@@ -16,12 +16,13 @@ class APIManager:
             settings: The application settings
         """
         self.settings = settings
-        provider_model = settings.ollama_model if settings.llm_provider == "ollama" else settings.openai_model
+        provider = settings.get_active_provider()
+        model = settings.get_active_model()
         self.logger = logging_manager.get_session(
-            f"APIManager-{provider_model}",
+            f"APIManager-{provider}-{model}",
             formatter=logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         )
-        self.model_name = provider_model
+        self.model_name = model
     
     def prepare_request_payload(self, messages: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Prepare the request payload for the LLM API.

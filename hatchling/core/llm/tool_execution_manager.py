@@ -23,8 +23,12 @@ class ToolExecutionManager:
             settings (ChatSettings): The application settings.
         """
         self.settings = settings
-        self.logger = logging_manager.get_session(f"ToolExecutionManager-{settings.ollama_model}",
-                                      formatter=logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+        provider = settings.get_active_provider()
+        model = settings.get_active_model()
+        self.logger = logging_manager.get_session(
+            f"ToolExecutionManager-{provider}-{model}",
+            formatter=logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        )
         self.tools_enabled = False
         
         # Tool calling control properties
