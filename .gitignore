@@ -48,4 +48,13 @@ coverage.xml
 Dockerfile.*
 docker-compose.override.yml
 .dockerignore
+
+# Environment files with sensitive data
+.env
+docker/.env
 .docker/
+
+# Environment files
+.env
+.env.*
+docker/.env
