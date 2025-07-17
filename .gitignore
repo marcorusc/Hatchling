@@ -52,9 +52,4 @@ docker-compose.override.yml
 # Environment files with sensitive data
 .env
 docker/.env
-.docker/
-
-# Environment files
-.env
-.env.*
-docker/.env
+!docker/.env.example
