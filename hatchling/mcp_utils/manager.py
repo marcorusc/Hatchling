@@ -10,9 +10,7 @@ from hatch import HatchEnvironmentManager
 from hatchling.mcp_utils.client import MCPClient
 from hatchling.mcp_utils.ollama_adapter import OllamaMCPAdapter
 from hatchling.core.logging.logging_manager import logging_manager
-from hatchling.core.llm.providers.subscription import (
-    StreamPublisher, 
-    StreamEventType,
+from hatchling.mcp_utils.mcp_tool_data import (
     MCPToolInfo,
     MCPToolStatus,
     MCPToolStatusReason
@@ -66,6 +64,8 @@ class MCPManager:
         self._hatch_env_manager = None
         
         # Event publishing capabilities
+        # Import here to avoid circular import
+        from hatchling.core.llm.providers.subscription import StreamPublisher
         self._stream_publisher = StreamPublisher("mcp_manager")
         
         # Tool management for lifecycle events
@@ -76,7 +76,7 @@ class MCPManager:
                                   formatter=logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
 
     @property
-    def publisher(self) -> StreamPublisher:
+    def publisher(self):
         """Access to the StreamPublisher for MCP lifecycle events.
         
         Returns:
@@ -84,11 +84,11 @@ class MCPManager:
         """
         return self._stream_publisher
     
-    def _publish_server_event(self, event_type: StreamEventType, server_path: str, **additional_data) -> None:
+    def _publish_server_event(self, event_type, server_path: str, **additional_data) -> None:
         """Publish a server lifecycle event.
         
         Args:
-            event_type (StreamEventType): Type of server event to publish.
+            event_type: Type of server event to publish.
             server_path (str): Path to the server that triggered the event.
             **additional_data: Additional data to include in the event.
         """
@@ -99,12 +99,12 @@ class MCPManager:
         self._stream_publisher.publish(event_type, event_data)
         self.logger.debug(f"Published {event_type.value} event for server: {server_path}")
     
-    def _publish_tool_event(self, event_type: StreamEventType, tool_name: str, 
+    def _publish_tool_event(self, event_type, tool_name: str, 
                            tool_info: Optional[MCPToolInfo] = None, **additional_data) -> None:
         """Publish a tool lifecycle event.
         
         Args:
-            event_type (StreamEventType): Type of tool event to publish.
+            event_type: Type of tool event to publish.
             tool_name (str): Name of the tool that triggered the event.
             tool_info (Optional[MCPToolInfo]): Tool information if available.
             **additional_data: Additional data to include in the event.
@@ -195,6 +195,7 @@ class MCPManager:
                     self.mcp_clients[path] = client
                     
                     # Publish server up event
+                    from hatchling.core.llm.providers.subscription import StreamEventType
                     self._publish_server_event(StreamEventType.MCP_SERVER_UP, path, 
                                              tool_count=len(client.tools))
                     
@@ -247,6 +248,9 @@ class MCPManager:
             self.logger.debug(f"Disconnecting all clients from task: {current_task_id}")
             
             disconnection_errors = False
+            
+            # Import here to avoid circular import
+            from hatchling.core.llm.providers.subscription import StreamEventType
             
             # First try the graceful disconnect approach
             for path, client in list(self.mcp_clients.items()):
@@ -396,6 +400,7 @@ class MCPManager:
         tool_info.last_updated = time.time()
         
         # Publish event
+        from hatchling.core.llm.providers.subscription import StreamEventType
         self._publish_tool_event(StreamEventType.MCP_TOOL_ENABLED, tool_name, tool_info)
         
         self.logger.info(f"Enabled tool: {tool_name}")
@@ -429,6 +434,7 @@ class MCPManager:
         tool_info.last_updated = time.time()
         
         # Publish event
+        from hatchling.core.llm.providers.subscription import StreamEventType
         self._publish_tool_event(StreamEventType.MCP_TOOL_DISABLED, tool_name, tool_info)
         
         self.logger.info(f"Disabled tool: {tool_name}")

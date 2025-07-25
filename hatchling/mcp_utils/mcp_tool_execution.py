@@ -28,8 +28,8 @@ class MCPToolExecution:
             settings (AppSettings): The application settings.
         """
         self.settings = settings
-        provider = settings.llm.get_active_provider()
-        model = settings.llm.model
+        provider = settings.llm.get_provider
+        model = settings.llm.get_active_model()
         self.logger = logging_manager.get_session(
             f"MCPToolExecution-{provider}-{model}",
             formatter=logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -75,7 +75,7 @@ class MCPToolExecution:
     
     def get_tools_for_payload(self) -> List[Dict[str, Any]]:
         """Get the list of tools/functions for the LLM API payload, in the correct format for the provider."""
-        if self.settings.llm.get_active_provider() == "openai":
+        if self.settings.llm.get_provider == "openai":
             # Return OpenAI function format (list of function schemas)
             tools = mcp_manager.get_ollama_tools()
             openai_functions = []
