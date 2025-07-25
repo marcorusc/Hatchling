@@ -9,7 +9,8 @@ RUN mkdir -p ${HATCHLING_SOURCE_DIR}
 # Install system dependencies
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-    wget bzip2 ca-certificates git gosu passwd sudo build-essential && \
+    wget bzip2 ca-certificates git gosu passwd sudo build-essential \
+    tk-dev tcl-dev libx11-dev python3-tk && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* 
 
