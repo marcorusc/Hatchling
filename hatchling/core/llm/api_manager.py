@@ -16,7 +16,7 @@ class APIManager:
             settings: The application settings
         """
         self.settings = settings
-        provider = settings.llm.get_active_provider()
+        provider = settings.llm.get_provider
         model = settings.llm.get_active_model()
         self.logger = logging_manager.get_session(
             f"APIManager-{provider}-{model}",
@@ -45,7 +45,7 @@ class APIManager:
         """Add tools/functions to the payload depending on provider."""
         if not tools:
             return payload
-        if self.settings.llm.get_active_provider() == "openai":
+        if self.settings.llm.get_provider == "openai":
             # Use the new OpenAI tools format (not the deprecated functions format)
             openai_tools = []
             for tool in tools:
@@ -123,36 +123,38 @@ class APIManager:
         
         return content, tool_results
     
-    async def stream_response(self, 
-                              session: aiohttp.ClientSession, 
-                              payload: Dict[str, Any], 
+    async def stream_response(self,
+                              session: aiohttp.ClientSession,
+                              payload: Dict[str, Any],
                               history: MessageHistory,
                               tool_executor,
-                              print_output: bool = True, 
-                              prefix: str = None, 
+                              print_output: bool = True,
+                              prefix: str = None,
                               update_history: bool = True) -> Tuple[str, List, List]:
-        """Stream a response from the API and handle common processing.
-        
-        Args:
-            session: The aiohttp client session to use.
-            payload: The request payload to send to the API.
-            history: The message history to update
-            tool_executor (ToolExecutionManager): Tool execution manager
-            print_output: Whether to print the output to the console
-            prefix: Optional prefix to print before the response.
-            update_history: Whether to update message history with the response.
-            
-        Returns:
-            Tuple containing (full_response, message_tool_calls, tool_results).
-        """
+        """Stream a response using the configured provider."""
+
+        # Check if we're using OpenAI provider for proper tool format
+        if self.settings.llm.get_provider == "openai":
+            return await self._stream_openai_response(
+                session, payload, history, tool_executor,
+                print_output=print_output,
+                prefix=prefix,
+                update_history=update_history,
+            )
+
+        # For other providers (like Ollama), use the original generic implementation
         full_response = ""
         message_tool_calls = []
         tool_results = []
         
         if prefix and print_output:
             print(prefix)
+        
+        # Ollama or other providers
+        api_url = f"http://{self.settings.ollama.ollama_ip}:{self.settings.ollama.ollama_port}/api/chat"
+        headers = {}
             
-        async with session.post(f"{self.settings.llm.api_url}/chat", json=payload) as response:
+        async with session.post(api_url, json=payload, headers=headers) as response:
             if response.status != 200:
                 error_text = await response.text()
                 self.logger.error(f"Error: {response.status}, {error_text}")
@@ -208,22 +210,37 @@ class APIManager:
                                       print_output: bool = True,
                                       prefix: str = None,
                                       update_history: bool = True) -> Tuple[str, List, List]:
-        """Stream a response from the OpenAI API, supporting function calling."""
+        """Stream a response from the OpenAI API with proper tool call handling.
+        
+        This method handles OpenAI's streaming tool call format correctly by maintaining
+        separate accumulators for each tool call index, allowing multiple tools to be
+        called simultaneously and their arguments to be streamed in fragments.
+        
+        Args:
+            session: HTTP client session
+            payload: Request payload for OpenAI API
+            history: Message history to update
+            tool_executor: Tool execution manager
+            print_output: Whether to print response content
+            prefix: Optional prefix to print
+            update_history: Whether to update message history
+            
+        Returns:
+            Tuple of (full_response, message_tool_calls, tool_results)
+        """
 
         full_response = ""
         message_tool_calls = []
         tool_results = []
-        function_call_accumulator = None
-        function_call_name = None
-        function_call_args = ""
-        function_call_id = None
+        # Support multiple simultaneous tool calls with separate accumulators per index
+        tool_call_accumulators = {}  # index -> {"accumulator": str, "name": str, "id": str}
 
-        headers = {"Authorization": f"Bearer {self.settings.llm.openai_api_key}"}
+        headers = {"Authorization": f"Bearer {self.settings.openai.api_key}"}
 
         if prefix and print_output:
             print(prefix)
 
-        async with session.post(f"{self.settings.llm.openai_api_url}/chat/completions",
+        async with session.post(f"{self.settings.openai.api_base}/chat/completions",
                                 json=payload,
                                 headers=headers) as response:
             if response.status != 200:
@@ -262,16 +279,38 @@ class APIManager:
                     # Handle tool calls (new format)
                     if "tool_calls" in delta:
                         tool_calls = delta["tool_calls"]
-                        if tool_calls and len(tool_calls) > 0:
-                            tool_call = tool_calls[0]  # Take the first tool call
+                        
+                        for tool_call in tool_calls:
+                            # Get the index for this tool call
+                            index = tool_call.get("index", 0)
+                            
+                            # Initialize accumulator for this index if needed
+                            if index not in tool_call_accumulators:
+                                tool_call_accumulators[index] = {
+                                    "accumulator": "",
+                                    "name": None,
+                                    "id": None
+                                }
+                                self.logger.debug(f"Initialized tool call accumulator for index {index}")
+                            
+                            acc = tool_call_accumulators[index]
+                            
+                            # Extract ID if present
+                            if "id" in tool_call and acc["id"] is None:
+                                acc["id"] = tool_call["id"]
+                            
                             if "function" in tool_call:
                                 fc = tool_call["function"]
-                                if function_call_accumulator is None:
-                                    function_call_accumulator = ""
-                                    function_call_name = fc.get("name")
-                                    function_call_id = tool_call.get("id") or "tool_call"
+                                
+                                # Extract function name if present
+                                if "name" in fc and acc["name"] is None:
+                                    acc["name"] = fc["name"]
+                                
+                                # Always accumulate arguments if present
                                 if "arguments" in fc:
-                                    function_call_accumulator += fc["arguments"]
+                                    acc["accumulator"] += fc["arguments"]
+                            else:
+                                self.logger.debug(f"Tool call missing 'function' key for index {index}")
                                 continue
 
                     # Handle normal content
@@ -281,54 +320,37 @@ class APIManager:
                             print(content_piece, end="", flush=True)
                         full_response += content_piece
 
-            # If a function call was accumulated, execute it
-            if function_call_accumulator and function_call_name:
-                try:
-                    args = json.loads(function_call_accumulator)
-                except Exception:
-                    args = {}
-                # Execute the tool
-                tool_result = await tool_executor.execute_tool(function_call_id, function_call_name, args)
-                if tool_result:
-                    # Add tool result in the format expected by update_message_history
-                    tool_results.append({
-                        "tool_call_id": function_call_id,
-                        "name": function_call_name,
-                        "content": tool_result["content"]
-                    })
-                    message_tool_calls.append({
-                        "id": function_call_id,
-                        "type": "function",  # Required by OpenAI
-                        "function": {"name": function_call_name, "arguments": function_call_accumulator}
-                    })
-                    # Note: Tool result will be added to history by update_message_history
+            # Execute all accumulated tool calls
+            for index, acc in tool_call_accumulators.items():
+                if acc["name"] and acc["accumulator"]:
+                    try:
+                        args = json.loads(acc["accumulator"])
+                        self.logger.debug(f"Executing tool {acc['name']} (index {index}) with args: {args}")
+                    except Exception as e:
+                        self.logger.error(f"Failed to parse tool arguments for {acc['name']} (index {index}): {e}")
+                        args = {}
+                    
+                    # Execute the tool
+                    tool_result = await tool_executor.execute_tool(acc["id"], acc["name"], args)
+                    if tool_result:
+                        # Add tool result in the format expected by update_message_history
+                        tool_results.append({
+                            "tool_call_id": acc["id"],
+                            "name": acc["name"],
+                            "content": tool_result["content"]
+                        })
+                        message_tool_calls.append({
+                            "id": acc["id"],
+                            "type": "function",  # Required by OpenAI
+                            "function": {"name": acc["name"], "arguments": acc["accumulator"]}
+                        })
+                else:
+                    if acc["name"]:
+                        self.logger.error(f"Tool {acc['name']} (index {index}) missing arguments")
+                    else:
+                        self.logger.error(f"Tool call (index {index}) missing function name")
 
         if update_history and history:
             history.update_message_history(full_response, message_tool_calls, tool_results)
 
         return full_response, message_tool_calls, tool_results
-
-    async def stream_response(self,
-                              session: aiohttp.ClientSession,
-                              payload: Dict[str, Any],
-                              history: MessageHistory,
-                              tool_executor,
-                              print_output: bool = True,
-                              prefix: str = None,
-                              update_history: bool = True) -> Tuple[str, List, List]:
-        """Stream a response using the configured provider."""
-
-        if self.settings.llm.get_active_provider() == "openai":
-            return await self._stream_openai_response(
-                session, payload, history, tool_executor,
-                print_output=print_output,
-                prefix=prefix,
-                update_history=update_history,
-            )
-
-        return await self._stream_ollama_response(
-            session, payload, history, tool_executor,
-            print_output=print_output,
-            prefix=prefix,
-            update_history=update_history,
-        )
