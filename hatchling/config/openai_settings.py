@@ -41,6 +41,12 @@ class OpenAISettings(BaseModel):
         json_schema_extra={"access_level": SettingAccessLevel.NORMAL},
     )
 
+    model: str = Field(
+        default_factory=lambda: os.environ.get("OPENAI_MODEL", "gpt-4o-mini"),
+        description="The default OpenAI model to use.",
+        json_schema_extra={"access_level": SettingAccessLevel.NORMAL},
+    )
+
     max_completion_tokens: int = Field(
         default_factory=lambda: int(os.environ.get("OPENAI_MAX_COMPLETION_TOKENS", 2048)),
         description="The maximum number of tokens for OpenAI completions. This includes visible and reasoning tokens (when enabled). The higher the value, the more tokens can be generated, but it may increase costs.",
@@ -60,7 +66,7 @@ class OpenAISettings(BaseModel):
     )
 
     tool_choice: Optional[OpenAIToolChoice] = Field(
-        default_factory=lambda: os.environ.get("OPENAI_TOOL_CHOICE", OpenAIToolChoice.AUTO),
+        default=OpenAIToolChoice.AUTO,
         description="The tool choice for OpenAI API requests.",
         json_schema_extra={"access_level": SettingAccessLevel.NORMAL},
     )
