@@ -30,7 +30,7 @@ class MockAppSettings:
     
     def __init__(self):
         self.llm = MagicMock()
-        self.llm.get_active_provider.return_value = "openai"
+        self.llm.get_provider = "openai"
         self.llm.get_active_model.return_value = "gpt-4"
         self.tool_calling = MagicMock()
         self.tool_calling.max_iterations = 5

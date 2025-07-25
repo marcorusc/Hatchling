@@ -201,7 +201,7 @@ class TestOpenAIProviderIntegration(unittest.TestCase):
         
         payload = self.provider.prepare_chat_payload(
             messages, 
-            "gpt-4.1-nano",
+            "gpt-4o-mini",
             temperature=0.7, 
             max_completion_tokens=100
         )
@@ -261,7 +261,7 @@ class TestOpenAIProviderIntegration(unittest.TestCase):
         messages = [
                     {"role": "user", "content": "Compute 789+654."}
                 ]
-        payload = self.provider.prepare_chat_payload(messages, "gpt-4.1-nano", temperature=0.1, max_completion_tokens=50)
+        payload = self.provider.prepare_chat_payload(messages, "gpt-4o-mini", temperature=0.1, max_completion_tokens=50)
         payload_with_tools = self.provider.add_tools_to_payload(payload.copy(), [tool_name])
 
         self.assertIn("model", payload)
@@ -384,7 +384,7 @@ class TestOpenAIProviderIntegration(unittest.TestCase):
         Ensures that initializing OpenAIProvider without an API key raises a ValueError.
         """
         with self.assertRaises(AttributeError) as context:
-            OpenAIProvider({"model": "gpt-4.1-nano"})  # Missing API key
+            OpenAIProvider({"model": "gpt-4o-mini"})  # Missing API key
         self.assertIn("'dict' object has no attribute 'api_key'", str(context.exception))
 
 

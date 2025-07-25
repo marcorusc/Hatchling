@@ -23,7 +23,7 @@ class MockAppSettings:
     
     def __init__(self):
         self.llm = MagicMock()
-        self.llm.get_active_provider.return_value = "openai"
+        self.llm.get_provider = "openai"
         self.llm.get_active_model.return_value = "gpt-4"
         self.tool_calling = MagicMock()
         self.tool_calling.max_iterations = 5
@@ -74,7 +74,7 @@ class TestToolExecutionRegression(unittest.TestCase):
             mock_mcp.get_ollama_tools.return_value = mock_tools
             
             # Test OpenAI provider format
-            self.mock_settings.llm.get_active_provider.return_value = "openai"
+            self.mock_settings.llm.get_provider = "openai"
             result = self.tool_execution.get_tools_for_payload()
             
             # Should return OpenAI format (list of functions)
@@ -213,7 +213,7 @@ class TestToolExecutionRegression(unittest.TestCase):
         self.assertEqual(self.tool_execution.settings, self.mock_settings)
         
         # Test that provider detection still works through settings
-        provider = self.tool_execution.settings.llm.get_active_provider()
+        provider = self.tool_execution.settings.llm.get_provider
         self.assertEqual(provider, "openai")  # From our mock
         
         model = self.tool_execution.settings.llm.model
