@@ -13,7 +13,6 @@ from ollama import AsyncClient
 from .base import LLMProvider
 from .registry import ProviderRegistry
 from .subscription import StreamPublisher, StreamEventType, ToolLifecycleSubscriber
-from hatchling.mcp_utils.manager import mcp_manager
 from hatchling.config.ollama_settings import OllamaSettings
 
 logger = logging.getLogger(__name__)
@@ -62,6 +61,7 @@ class OllamaProvider(LLMProvider):
         """
         try:
             self._stream_publisher = StreamPublisher("ollama")
+            from hatchling.mcp_utils.manager import mcp_manager
             mcp_manager.publisher.subscribe(self._toolLifecycle_subscriber)
 
             self._client = AsyncClient(host=self._host)
@@ -82,6 +82,7 @@ class OllamaProvider(LLMProvider):
         This method should be called when the provider is no longer needed.
         It will close the AsyncClient connection gracefully.
         """
+        from hatchling.mcp_utils.manager import mcp_manager
         mcp_manager.publisher.unsubscribe(self._toolLifecycle_subscriber)
     
     def prepare_chat_payload(

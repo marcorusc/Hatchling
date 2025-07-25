@@ -16,7 +16,6 @@ from openai import AsyncOpenAI
 from .base import LLMProvider
 from .registry import ProviderRegistry
 from .subscription import StreamPublisher, StreamEventType, ToolLifecycleSubscriber
-from hatchling.mcp_utils.manager import mcp_manager
 from hatchling.config.openai_settings import OpenAISettings
 
 logger = logging.getLogger(__name__)
@@ -64,6 +63,7 @@ class OpenAIProvider(LLMProvider):
         """
         try:
             self._stream_publisher = StreamPublisher("openai")
+            from hatchling.mcp_utils.manager import mcp_manager
             mcp_manager.publisher.subscribe(self._toolLifecycle_subscriber)
 
             # Initialize OpenAI async client using settings
@@ -94,6 +94,7 @@ class OpenAIProvider(LLMProvider):
         
         This method should be called to clean up resources when done.
         """
+        from hatchling.mcp_utils.manager import mcp_manager
         mcp_manager.publisher.unsubscribe(self._toolLifecycle_subscriber)
         if self._http_client:
             await self._http_client.aclose()
