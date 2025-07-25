@@ -30,12 +30,16 @@ category_display_name = "LLM Configuration"
 category_description = "Settings for Large Language Model configuration"
 
 # Ollama settings (new/expanded)
-[settings.ollama.ip]
+[settings.ollama]
+category_display_name = "Ollama Configuration"
+category_description = "Settings for Ollama local LLM server configuration"
+
+[settings.ollama.ollama_ip]
 name = "Ollama IP Address"
 description = "IP address for the Ollama API endpoint."
 hint = "Example: localhost"
 
-[settings.ollama.port]
+[settings.ollama.ollama_port]
 name = "Ollama Port"
 description = "Port for the Ollama API endpoint."
 hint = "Example: 11434"
@@ -96,6 +100,15 @@ description = "Alternative to top_p, ensures a balance of quality and variety. (
 hint = "Float value"
 
 # OpenAI settings (expanded)
+[settings.openai]
+category_display_name = "OpenAI Configuration"
+category_description = "Settings for OpenAI API configuration and models"
+
+[settings.openai.api_key]
+name = "OpenAI API Key"
+description = "The API key used to authenticate with OpenAI services."
+hint = "Enter your OpenAI API key (starts with sk-)"
+
 [settings.openai.api_base]
 name = "OpenAI API Base URL"
 description = "The base URL for OpenAI API requests."
@@ -104,7 +117,7 @@ hint = "Example: https://api.openai.com/v1"
 [settings.openai.model]
 name = "OpenAI Model"
 description = "The default OpenAI model to use."
-hint = "Example: gpt-4-1-nano"
+hint = "Example: gpt-4o-mini"
 
 [settings.openai.timeout]
 name = "OpenAI Timeout"

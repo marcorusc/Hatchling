@@ -30,12 +30,16 @@ category_display_name = "Configuration LLM"
 category_description = "Paramètres pour la configuration du modèle de langage"
 
 # Paramètres Ollama (nouveaux/étendus)
-[settings.ollama.ip]
+[settings.ollama]
+category_display_name = "Configuration Ollama"
+category_description = "Paramètres pour la configuration du serveur LLM local Ollama"
+
+[settings.ollama.ollama_ip]
 name = "Adresse IP Ollama"
 description = "Adresse IP pour le point de terminaison de l'API Ollama."
 hint = "Exemple : localhost"
 
-[settings.ollama.port]
+[settings.ollama.ollama_port]
 name = "Port Ollama"
 description = "Port pour le point de terminaison de l'API Ollama."
 hint = "Exemple : 11434"
@@ -96,6 +100,15 @@ description = "Alternative à top_p, assure un équilibre entre qualité et vari
 hint = "Valeur décimale"
 
 # Paramètres OpenAI (étendus)
+[settings.openai]
+category_display_name = "Configuration OpenAI"
+category_description = "Paramètres pour la configuration de l'API et des modèles OpenAI"
+
+[settings.openai.api_key]
+name = "Clé API OpenAI"
+description = "La clé API utilisée pour s'authentifier avec les services OpenAI."
+hint = "Entrez votre clé API OpenAI (commence par sk-)"
+
 [settings.openai.api_base]
 name = "URL de base API OpenAI"
 description = "URL de base pour les requêtes API OpenAI."
@@ -104,7 +117,7 @@ hint = "Exemple : https://api.openai.com/v1"
 [settings.openai.model]
 name = "Modèle OpenAI"
 description = "Modèle OpenAI par défaut à utiliser."
-hint = "Exemple : gpt-4-1-nano"
+hint = "Exemple : gpt-4o-mini"
 
 [settings.openai.timeout]
 name = "Timeout OpenAI"
