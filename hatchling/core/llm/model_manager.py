@@ -39,7 +39,7 @@ class ModelManager:
             Exception: If there is an error checking for model availability.
         """
         try:
-            async with session.get(f"{self.settings.llm.ollama_api_url}/tags") as response:
+            async with session.get(f"http://{self.settings.ollama.ollama_ip}:{self.settings.ollama.ollama_port}/api/tags") as response:
                 if response.status == 200:
                     data = await response.json()
                     available_models = [model["name"] for model in data.get("models", [])]
@@ -65,7 +65,7 @@ class ModelManager:
 
         try:
             async with session.post(
-                f"{self.settings.llm.ollama_api_url}/pull",
+                f"http://{self.settings.ollama.ollama_ip}:{self.settings.ollama.ollama_port}/api/pull",
                 json={"name": model_name},
                 timeout=None  # No timeout for model downloading
             ) as response:
@@ -122,7 +122,7 @@ class ModelManager:
         """
         try:
             async with aiohttp.ClientSession() as session:
-                async with session.get(f"{self.settings.llm.ollama_api_url}/version", timeout=5) as response:
+                async with session.get(f"http://{self.settings.ollama.ollama_ip}:{self.settings.ollama.ollama_port}/api/version", timeout=5) as response:
                     if response.status == 200:
                         data = await response.json()
                         return True, f"Ollama service is running, version: {data.get('version')}"
@@ -134,22 +134,22 @@ class ModelManager:
     async def check_openai_service(self) -> Tuple[bool, str]:
         """Check if OpenAI API key is set and the model is available (via a test API call)."""
         import aiohttp
-        if not self.settings.llm.openai_api_key:
-            return False, "OpenAI API key is missing. Please set CHATGPT_API_KEY in your environment."
+        if not self.settings.openai.api_key:
+            return False, "OpenAI API key is missing. Please set OPENAI_API_KEY in your environment."
         try:
             headers = {
-                "Authorization": f"Bearer {self.settings.llm.openai_api_key}",
+                "Authorization": f"Bearer {self.settings.openai.api_key}",
                 "Content-Type": "application/json"
             }
             payload = {
-                "model": self.settings.llm.openai_model,
+                "model": self.settings.openai.model,
                 "messages": [{"role": "user", "content": "Hello"}],
                 "max_tokens": 1
             }
             async with aiohttp.ClientSession() as session:
-                async with session.post(f"{self.settings.llm.openai_api_url}/chat/completions", json=payload, headers=headers, timeout=10) as response:
+                async with session.post(f"{self.settings.openai.api_base}/chat/completions", json=payload, headers=headers, timeout=10) as response:
                     if response.status == 200:
-                        return True, f"OpenAI service is available and model '{self.settings.llm.openai_model}' is accessible."
+                        return True, f"OpenAI service is available and model '{self.settings.openai.model}' is accessible."
                     else:
                         text = await response.text()
                         return False, f"OpenAI service returned status {response.status}: {text}"
