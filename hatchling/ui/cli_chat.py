@@ -91,7 +91,8 @@ class CLIChat:
         Returns:
             bool: True if initialization was successful.
         """
-        provider = self.settings_registry.settings.llm.get_active_provider()
+        # Use the LLM provider to create the provider instance
+        provider = self.settings_registry.settings.llm.get_provider
         model = self.settings_registry.settings.llm.get_active_model()
         print_pt(FormattedText([
             ('yellow bold', f"\nUsing LLM provider: {provider} (model: {model})\n")
@@ -101,7 +102,7 @@ class CLIChat:
             if not available:
                 self.logger.error(message)
                 self.logger.error(
-                    f"Please ensure the Ollama service is running at {self.settings_registry.settings.llm.ollama_api_url} before running this script."
+                    f"Please ensure the Ollama service is running at http://{self.settings_registry.settings.ollama.ollama_ip}:{self.settings_registry.settings.ollama.ollama_port} before running this script."
                 )
                 print_pt(FormattedText([('red bold', message)]))
                 return False
@@ -158,18 +159,18 @@ class CLIChat:
         Returns:
             bool: True if model is available (either already or after pulling).
         """
-        if self.settings_registry.settings.llm.get_active_provider() != "ollama":
+        if self.settings_registry.settings.llm.get_provider != "ollama":
             return True
 
         try:
             # Check if model is available
-            is_model_available = await self.model_manager.check_availability(session, self.settings_registry.settings.llm.ollama_model)
+            is_model_available = await self.model_manager.check_availability(session, self.settings_registry.settings.llm.get_active_model())
 
             if is_model_available:
-                self.logger.info(f"Model {self.settings_registry.settings.llm.ollama_model} is already pulled.")
+                self.logger.info(f"Model {self.settings_registry.settings.llm.get_active_model()} is already pulled.")
                 return True
             else:
-                await self.model_manager.pull_model(session, self.settings_registry.settings.llm.ollama_model)
+                await self.model_manager.pull_model(session, self.settings_registry.settings.llm.get_active_model())
                 return True
         except Exception as e:
             self.logger.error(f"Error checking/pulling model: {e}")

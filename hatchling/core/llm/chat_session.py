@@ -18,7 +18,7 @@ class ChatSession:
             settings (AppSettings): Configuration settings for the chat session.
         """
         self.settings = settings
-        provider = settings.llm.get_active_provider()
+        provider = settings.llm.get_provider
         model = settings.llm.get_active_model()
         self.model_name = model
         # Unified logger naming: ChatSession-provider-model
