@@ -126,7 +126,15 @@ class OpenAIProvider(LLMProvider):
         # Add settings-based parameters with kwargs override
         payload["temperature"] = kwargs.get("temperature", self._settings.temperature)
         payload["top_p"] = kwargs.get("top_p", self._settings.top_p)
-        payload["max_completion_tokens"] = kwargs.get("max_completion_tokens", self._settings.max_completion_tokens)
+        
+        # Handle max tokens parameter based on model type
+        if model.startswith(("o1", "o4")):
+            # o1/o4 models require max_completion_tokens
+            payload["max_completion_tokens"] = kwargs.get("max_completion_tokens", kwargs.get("max_tokens", self._settings.max_completion_tokens))
+        else:
+            # Other models use max_tokens (but map max_completion_tokens if provided)
+            max_tokens_value = kwargs.get("max_tokens", kwargs.get("max_completion_tokens", self._settings.max_completion_tokens))
+            payload["max_tokens"] = max_tokens_value
     
         
         # Add other OpenAI-specific optional parameters

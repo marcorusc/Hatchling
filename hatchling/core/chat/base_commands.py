@@ -90,6 +90,19 @@ class BaseChatCommands(AbstractCommands):
                     }
                 }
             },
+            'set_max_tool_working_time': {
+                'handler': self._cmd_set_max_tool_working_time,
+                'description': translate("commands.base.set_max_tool_working_time_description"),
+                'is_async': False,
+                'args': {
+                    'seconds': {
+                        'positional': True,
+                        'completer_type': 'none',
+                        'description': translate('commands.args.value_description'),
+                        'required': True
+                    }
+                }
+            }, 
             'set_max_working_time': {
                 'handler': self._cmd_set_max_working_time,
                 'description': translate("commands.base.set_max_working_time_description"),
@@ -294,6 +307,26 @@ class BaseChatCommands(AbstractCommands):
                 self.logger.error("Maximum iterations must be greater than 0")
         except ValueError:
             self.logger.error("Invalid value for maximum iterations. Usage: set_max_tool_call_iterations <positive integer>")
+        return True
+    
+    def _cmd_set_max_tool_working_time(self, args: str) -> bool:
+        """Set maximum working time for a single tool operation.
+        
+        Args:
+            args (str): Time in seconds.
+            
+        Returns:
+            bool: True to continue the chat session.
+        """
+        try:
+            seconds = float(args.strip())
+            if seconds > 0:
+                self.settings.tool_calling.max_tool_working_time = seconds
+                self.logger.info(f"Maximum tool working time set to {seconds} seconds")
+            else:
+                self.logger.error("Maximum tool working time must be greater than 0")
+        except ValueError:
+            self.logger.error("Invalid value for maximum tool working time. Usage: set_max_tool_working_time <positive number>")
         return True
     
     def _cmd_set_max_working_time(self, args: str) -> bool:

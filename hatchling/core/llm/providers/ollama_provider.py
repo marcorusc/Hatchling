@@ -144,6 +144,7 @@ class OllamaProvider(LLMProvider):
         # Map common parameters to Ollama options with kwargs override
         param_mapping = {
             "max_tokens": "num_predict",
+            "max_completion_tokens": "num_predict",  # Also support OpenAI-style parameter
         }
         
         for param, ollama_param in param_mapping.items():
